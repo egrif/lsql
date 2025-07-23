@@ -92,7 +92,7 @@ module Lsql
           @options.mode = mode
         end
 
-        opts.on('--clear-cache', 'Clear the database URL cache') do
+        opts.on('--clear-cache', 'Clear the persistent database URL cache') do
           @options.clear_cache = true
         end
 
@@ -114,7 +114,7 @@ module Lsql
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -n # Run query with separate output per environment"
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -v # Run query with verbose progress output"
         opts.separator "  #{File.basename($PROGRAM_NAME)} -g list                        # List all available groups"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} --clear-cache                 # Clear cached database URLs"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} --clear-cache                 # Clear persistent cached database URLs"
       end
 
       begin

@@ -1,11 +1,20 @@
 require 'moneta'
+require 'fileutils'
 
 module LSQL
   class CacheManager
     TTL = 600 # 10 minutes in seconds
+    CACHE_DIR = File.expand_path('~/.lsql_cache')
 
     def initialize
-      @store = Moneta.new(:Memory, expires: true, default_expires: TTL)
+      # Ensure cache directory exists
+      FileUtils.mkdir_p(CACHE_DIR) unless Dir.exist?(CACHE_DIR)
+      
+      # Use file-based store with expiration support
+      @store = Moneta.new(:File, 
+                         dir: CACHE_DIR, 
+                         expires: true, 
+                         default_expires: TTL)
     end
 
     def get(key)
