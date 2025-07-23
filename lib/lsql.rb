@@ -8,6 +8,7 @@ require_relative 'lsql/database_connector'
 require_relative 'lsql/sql_executor'
 require_relative 'lsql/group_handler'
 require_relative 'lsql/output_aggregator'
+require_relative 'lsql/cache_manager'
 
 module Lsql
   class Error < StandardError; end
@@ -21,6 +22,14 @@ module Lsql
     def run(args = ARGV)
       # Parse command-line options
       options = @parser.parse(args)
+
+      # Handle cache clearing if requested
+      if options.clear_cache
+        cache = LSQL::CacheManager.instance
+        cache.clear_cache
+        puts 'Database URL cache cleared successfully'
+        return
+      end
 
       # Check if we're running against a group
       if options.group

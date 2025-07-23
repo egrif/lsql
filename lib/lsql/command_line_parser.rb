@@ -17,7 +17,8 @@ module Lsql
         mode: 'rw',
         group: nil,
         no_agg: false,
-        verbose: false
+        verbose: false,
+        clear_cache: false
       )
     end
 
@@ -91,6 +92,10 @@ module Lsql
           @options.mode = mode
         end
 
+        opts.on('--clear-cache', 'Clear the database URL cache') do
+          @options.clear_cache = true
+        end
+
         opts.on('-h', '--help', 'Display this help message') do
           puts opts
           exit
@@ -109,6 +114,7 @@ module Lsql
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -n # Run query with separate output per environment"
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -v # Run query with verbose progress output"
         opts.separator "  #{File.basename($PROGRAM_NAME)} -g list                        # List all available groups"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} --clear-cache                 # Clear cached database URLs"
       end
 
       begin
@@ -119,17 +125,19 @@ module Lsql
         exit 1
       end
 
-      # Check required parameters
-      if @options.env.nil? && @options.group.nil?
-        puts 'Error: Either Environment (-e) or Group (-g) is required.'
-        puts option_parser
-        exit 1
-      end
+      # Check required parameters (skip when clearing cache)
+      unless @options.clear_cache
+        if @options.env.nil? && @options.group.nil?
+          puts 'Error: Either Environment (-e) or Group (-g) is required.'
+          puts option_parser
+          exit 1
+        end
 
-      if @options.env && @options.group
-        puts 'Error: Cannot specify both Environment (-e) and Group (-g) options.'
-        puts option_parser
-        exit 1
+        if @options.env && @options.group
+          puts 'Error: Cannot specify both Environment (-e) and Group (-g) options.'
+          puts option_parser
+          exit 1
+        end
       end
 
       @options

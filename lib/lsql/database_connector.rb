@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'open3'
+require_relative 'cache_manager'
 
 module Lsql
   # Handles database URL retrieval and transformation
@@ -10,40 +11,54 @@ module Lsql
     def initialize(options)
       @options = options
       @mode_display = ''
+      @cache = LSQL::CacheManager.instance
     end
 
     def get_database_url
-      # Always get the main database URL - never use any other secret name
-      cmd = "lotus secret get DATABASE_MAIN_URL -s \"#{@options.space}\" -e \"#{@options.env}\" -r \"#{@options.region}\" -a \"#{@options.application}\""
-      stdout, stderr, status = Open3.capture3(cmd)
-
-      if status.success?
-        database_url = stdout.strip.gsub('DATABASE_MAIN_URL=', '')
-
-        if database_url.empty?
-          puts "Failed to retrieve DATABASE_MAIN_URL for environment: #{@options.env}"
-          exit 1
-        end
-
-        # Store the original URL for safety check
-        original_url = database_url
-
-        # Transform the database URL based on the mode
-        database_url = transform_database_url(database_url)
-
-        # Safety check: If attempting to use a read-only mode but URL didn't change,
-        # the replica might not exist or pattern matching failed
-        if @options.mode != 'rw' && database_url == original_url
-          puts "Error: Attempted to connect to #{@options.mode} replica, but the connection URL"
-          puts 'is identical to the main database URL. The replica may not exist.'
-          exit 1
-        end
-
-        database_url
+      environment_key = "#{@options.space}_#{@options.env}_#{@options.region}_#{@options.application}"
+      
+      # Check if URL is cached
+      cached_url = nil
+      if @cache.url_cached?(environment_key)
+        puts "Using cached database URL for #{@options.env}" if @options.verbose
+        cached_url = @cache.get_cached_url(environment_key)
       else
-        puts "Failed to retrieve DATABASE_MAIN_URL: #{stderr}"
+        # Always get the main database URL - never use any other secret name
+        cmd = "lotus secret get DATABASE_MAIN_URL -s \"#{@options.space}\" -e \"#{@options.env}\" -r \"#{@options.region}\" -a \"#{@options.application}\""
+        stdout, stderr, status = Open3.capture3(cmd)
+
+        if status.success?
+          cached_url = stdout.strip.gsub('DATABASE_MAIN_URL=', '')
+
+          if cached_url.empty?
+            puts "Failed to retrieve DATABASE_MAIN_URL for environment: #{@options.env}"
+            exit 1
+          end
+
+          # Cache the original URL
+          @cache.cache_url(environment_key, cached_url)
+          puts "Cached database URL for #{@options.env} (TTL: 10 minutes)" if @options.verbose
+        else
+          puts "Failed to retrieve DATABASE_MAIN_URL: #{stderr}"
+          exit 1
+        end
+      end
+
+      # Store the original URL for safety check
+      original_url = cached_url
+
+      # Transform the database URL based on the mode
+      database_url = transform_database_url(cached_url)
+
+      # Safety check: If attempting to use a read-only mode but URL didn't change,
+      # the replica might not exist or pattern matching failed
+      if @options.mode != 'rw' && database_url == original_url
+        puts "Error: Attempted to connect to #{@options.mode} replica, but the connection URL"
+        puts 'is identical to the main database URL. The replica may not exist.'
         exit 1
       end
+
+      database_url
     end
 
     def transform_database_url(url)
