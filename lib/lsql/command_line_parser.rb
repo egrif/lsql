@@ -19,7 +19,8 @@ module Lsql
         no_agg: false,
         verbose: false,
         clear_cache: false,
-        cache_prefix: nil
+        cache_prefix: nil,
+        cache_stats: false
       )
     end
 
@@ -104,6 +105,10 @@ module Lsql
           @options.cache_prefix = prefix
         end
 
+        opts.on('--cache-stats', 'Show cache statistics and TTL information') do
+          @options.cache_stats = true
+        end
+
         opts.on('-h', '--help', 'Display this help message') do
           puts opts
           exit
@@ -124,6 +129,7 @@ module Lsql
         opts.separator "  #{File.basename($PROGRAM_NAME)} -g list                        # List all available groups"
         opts.separator "  #{File.basename($PROGRAM_NAME)} --clear-cache                 # Clear persistent cached database URLs"
         opts.separator "  #{File.basename($PROGRAM_NAME)} --cache-prefix myapp --clear-cache # Clear cache with custom prefix"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} --cache-stats                 # Show cache statistics and TTL info"
       end
 
       begin
@@ -134,8 +140,8 @@ module Lsql
         exit 1
       end
 
-      # Check required parameters (skip when clearing cache)
-      unless @options.clear_cache
+      # Check required parameters (skip when clearing cache or showing stats)
+      unless @options.clear_cache || @options.cache_stats
         if @options.env.nil? && @options.group.nil?
           puts 'Error: Either Environment (-e) or Group (-g) is required.'
           puts option_parser

@@ -1,5 +1,6 @@
 require 'moneta'
 require 'fileutils'
+require 'cgi'
 
 module LSQL
   class CacheManager
@@ -53,10 +54,38 @@ module LSQL
       @redis_connection_successful = false
       
       # Use file-based store with expiration support
-      Moneta.new(:File, 
-                 dir: CACHE_DIR, 
-                 expires: true, 
-                 default_expires: TTL)
+      store = Moneta.new(:File, 
+                         dir: CACHE_DIR, 
+                         expires: true, 
+                         default_expires: TTL)
+      
+      # Clean up expired entries on initialization
+      cleanup_expired_entries(store)
+      
+      store
+    end
+
+    def cleanup_expired_entries(store)
+      return unless store.is_a?(Moneta::Adapters::File)
+      
+      # Get all keys and check each one for expiration
+      # This forces Moneta to check TTL and remove expired entries
+      begin
+        Dir.glob(File.join(CACHE_DIR, '*')).each do |file|
+          next unless File.file?(file)
+          
+          # Extract key from filename (Moneta URL-encodes keys)
+          key = File.basename(file)
+          key = CGI.unescape(key) rescue key
+          
+          # Accessing the key will trigger TTL check and cleanup
+          store.key?(key)
+        end
+        
+        puts "Cleaned up expired cache entries" if ENV['LSQL_VERBOSE']
+      rescue => e
+        puts "Warning: Failed to cleanup expired entries: #{e.message}" if ENV['LSQL_VERBOSE']
+      end
     end
 
     public
@@ -69,7 +98,8 @@ module LSQL
       if redis_store?
         @store.store(key, value, expires: TTL)
       else
-        @store[key] = value
+        # For file store, use explicit expiration to ensure TTL works
+        @store.store(key, value, expires: TTL)
       end
     end
 
@@ -127,6 +157,28 @@ module LSQL
 
     def clear_cache
       @store.clear
+    end
+
+    def cache_stats
+      if redis_store?
+        # For Redis, count keys with our prefix pattern
+        redis_keys = `redis-cli keys "lsql:#{@cache_prefix}:*" 2>/dev/null`.split("\n").reject(&:empty?)
+        total_keys = redis_keys.length
+        backend = "Redis"
+      else
+        # For file store, count files in cache directory
+        pattern = File.join(CACHE_DIR, "lsql%3A#{@cache_prefix}%3A*")
+        files = Dir.glob(pattern)
+        total_keys = files.length
+        backend = "File"
+      end
+      
+      {
+        backend: backend,
+        prefix: @cache_prefix,
+        total_entries: total_keys,
+        ttl_seconds: TTL
+      }
     end
 
     def self.instance(cache_prefix = nil)

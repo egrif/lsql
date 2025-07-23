@@ -31,6 +31,19 @@ module Lsql
         return
       end
 
+      # Handle cache stats if requested
+      if options.cache_stats
+        cache = LSQL::CacheManager.instance(options.cache_prefix)
+        stats = cache.cache_stats
+        puts "Cache Statistics:"
+        puts "  Backend: #{stats[:backend]}"
+        puts "  Prefix: #{stats[:prefix]}"
+        puts "  Total entries: #{stats[:total_entries]}"
+        puts "  TTL: #{stats[:ttl_seconds]} seconds (#{stats[:ttl_seconds]/60} minutes)"
+        puts "  Location: #{stats[:backend] == 'Redis' ? ENV['REDIS_URL'] || 'redis://localhost:6379' : LSQL::CacheManager::CACHE_DIR}"
+        return
+      end
+
       # Check if we're running against a group
       if options.group
         group_handler = GroupHandler.new(options)
