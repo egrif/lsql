@@ -54,6 +54,10 @@ module Lsql
 
     def append_sql_command_to_output_file(sql_command)
       return unless @options.output_file
+      
+      # Only append SQL command comment in non-aggregated mode with real output files
+      # Skip for temporary files used in aggregation
+      return if temp_file?
 
       File.open(@options.output_file, 'a') do |file|
         file.puts '/* SQL command:'
@@ -64,6 +68,10 @@ module Lsql
 
     def append_sql_file_to_output_file(sql_file)
       return unless @options.output_file
+      
+      # Only append SQL file comment in non-aggregated mode with real output files
+      # Skip for temporary files used in aggregation
+      return if temp_file?
 
       File.open(@options.output_file, 'a') do |file|
         file.puts '/* SQL file content:'

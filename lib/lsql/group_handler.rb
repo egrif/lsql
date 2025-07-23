@@ -43,6 +43,7 @@ module Lsql
       puts "=" * 60
 
       # Initialize output aggregator if aggregation is enabled
+      # Use aggregation unless --no-agg flag is specified
       aggregator = @options.no_agg ? nil : OutputAggregator.new(@options)
       original_output_file = @options.output_file
 
