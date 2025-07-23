@@ -6,6 +6,7 @@ require_relative 'lsql/output_file_manager'
 require_relative 'lsql/environment_manager'
 require_relative 'lsql/database_connector'
 require_relative 'lsql/sql_executor'
+require_relative 'lsql/group_handler'
 
 module Lsql
   class Error < StandardError; end
@@ -19,6 +20,13 @@ module Lsql
     def run(args = ARGV)
       # Parse command-line options
       options = @parser.parse(args)
+
+      # Check if we're running against a group
+      if options.group
+        group_handler = GroupHandler.new(options)
+        group_handler.execute_for_group
+        return
+      end
 
       # Setup environment
       EnvironmentManager.new(options)

@@ -14,7 +14,8 @@ module Lsql
         space: nil,
         output_file: nil,
         sql_command: nil,
-        mode: 'rw'
+        mode: 'rw',
+        group: nil
       )
     end
 
@@ -34,8 +35,13 @@ module Lsql
         opts.separator ''
         opts.separator 'Options:'
 
-        opts.on('-e ENV', 'Environment (required)') do |env|
+        opts.on('-e ENV', 'Environment (required unless using -g)') do |env|
           @options.env = env
+        end
+
+        opts.on('-g GROUP', '--group GROUP', 'Group name to execute against all environments in the group',
+                '  Use "list" to see available groups') do |group|
+          @options.group = group
         end
 
         opts.on('-o [OUTPUT_FILE]', 'Output file (optional)',
@@ -86,6 +92,9 @@ module Lsql
         opts.separator "  #{File.basename($PROGRAM_NAME)} -e dev01 -r use1 -a customapp     # Connect to customapp in use1 region"
         opts.separator "  #{File.basename($PROGRAM_NAME)} -e prod01 -m ro                   # Connect using primary replica"
         opts.separator "  #{File.basename($PROGRAM_NAME)} -e prod01 -m secondary            # Connect using secondary replica"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT count(*) FROM users\" -g staging # Run query on all staging environments"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} query.sql -g us-prod -o results    # Run query file on all US production environments"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} -g list                        # List all available groups"
       end
 
       begin
@@ -97,8 +106,14 @@ module Lsql
       end
 
       # Check required parameters
-      if @options.env.nil?
-        puts 'Error: Environment (-e) is required.'
+      if @options.env.nil? && @options.group.nil?
+        puts 'Error: Either Environment (-e) or Group (-g) is required.'
+        puts option_parser
+        exit 1
+      end
+
+      if @options.env && @options.group
+        puts 'Error: Cannot specify both Environment (-e) and Group (-g) options.'
         puts option_parser
         exit 1
       end
