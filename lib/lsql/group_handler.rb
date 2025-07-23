@@ -119,12 +119,23 @@ module Lsql
         puts " done"
       end
 
-      # If using aggregation, output the aggregated results
+      # If using aggregation, handle output appropriately
       if aggregator
-        puts "\n" + "=" * 60
-        puts "AGGREGATED OUTPUT"
-        puts "=" * 60
-        aggregator.aggregate_output(original_output_file)
+        if original_output_file
+          # When outputting to a file, don't display aggregated results to stdout
+          # Just aggregate to the file and show the file path
+          aggregator.aggregate_output(original_output_file)
+          puts "\n" + "=" * 60
+          puts "OUTPUT WRITTEN TO FILE"
+          puts "=" * 60
+          puts "File: #{original_output_file}"
+        else
+          # When no output file specified, display aggregated results to stdout
+          puts "\n" + "=" * 60
+          puts "AGGREGATED OUTPUT"
+          puts "=" * 60
+          aggregator.aggregate_output(original_output_file)
+        end
       end
 
       print_summary(results)
