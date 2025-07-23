@@ -7,6 +7,7 @@ require_relative 'lsql/environment_manager'
 require_relative 'lsql/database_connector'
 require_relative 'lsql/sql_executor'
 require_relative 'lsql/group_handler'
+require_relative 'lsql/output_aggregator'
 
 module Lsql
   class Error < StandardError; end

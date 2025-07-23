@@ -15,7 +15,9 @@ module Lsql
         output_file: nil,
         sql_command: nil,
         mode: 'rw',
-        group: nil
+        group: nil,
+        no_agg: false,
+        verbose: false
       )
     end
 
@@ -42,6 +44,16 @@ module Lsql
         opts.on('-g GROUP', '--group GROUP', 'Group name to execute against all environments in the group',
                 '  Use "list" to see available groups') do |group|
           @options.group = group
+        end
+
+        opts.on('-n', '--no-agg', 'Disable output aggregation for group operations',
+                '  By default, group output is aggregated with environment prefixes') do
+          @options.no_agg = true
+        end
+
+        opts.on('-v', '--verbose', 'Enable verbose output for group operations',
+                '  Shows detailed progress per environment (default: simple progress dots)') do
+          @options.verbose = true
         end
 
         opts.on('-o [OUTPUT_FILE]', 'Output file (optional)',
@@ -94,6 +106,8 @@ module Lsql
         opts.separator "  #{File.basename($PROGRAM_NAME)} -e prod01 -m secondary            # Connect using secondary replica"
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT count(*) FROM users\" -g staging # Run query on all staging environments"
         opts.separator "  #{File.basename($PROGRAM_NAME)} query.sql -g us-prod -o results    # Run query file on all US production environments"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -n # Run query with separate output per environment"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -v # Run query with verbose progress output"
         opts.separator "  #{File.basename($PROGRAM_NAME)} -g list                        # List all available groups"
       end
 

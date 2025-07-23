@@ -5,7 +5,6 @@ groups:
     environments:
     - staging
     - staging-s2
-    - staging-s3
     - staging-s101
     - staging-s201
   prod:

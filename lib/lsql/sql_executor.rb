@@ -51,9 +51,11 @@ module Lsql
     end
 
     def run_sql_file(database_url, options)
-      # Extract and print the hostname from the database URL
-      hostname = @database_connector.extract_hostname(database_url)
-      puts "Connecting to: #{hostname}"
+      # Extract and print the hostname from the database URL (only in verbose mode)
+      if @options.respond_to?(:verbose) && @options.verbose
+        hostname = @database_connector.extract_hostname(database_url)
+        puts "Connecting to: #{hostname}"
+      end
 
       # Validate the file contains SQL commands
       File.open(@options.sql_command, 'r') do |file|
@@ -76,9 +78,11 @@ module Lsql
     end
 
     def run_sql_command(database_url, options)
-      # Extract and print the hostname from the database URL
-      hostname = @database_connector.extract_hostname(database_url)
-      puts "Connecting to: #{hostname}"
+      # Extract and print the hostname from the database URL (only in verbose mode)
+      if @options.respond_to?(:verbose) && @options.verbose
+        hostname = @database_connector.extract_hostname(database_url)
+        puts "Connecting to: #{hostname}"
+      end
 
       if @options.output_file
         command = "psql -d \"#{database_url}\" #{options} -c \"#{@options.sql_command}\" > \"#{@options.output_file}\""

@@ -1,6 +1,67 @@
 # Group Handler Documentation
 
-The LSQL tool now supports executing commands against groups of environments using the `-g` (or `--group`) option.
+The LSQL tool now supports executing commands against groups of environments using the `-g` (or `--group`) option, with optional outp4. **Output Aggregation**: By default, group operations aggregate output. Use `-n` to disable aggregation and get separate outputs per environment.
+
+5. **Verbose Output**: By default, group operations show simple progress dots. Use `-v` to enable detailed progress information per environment.
+
+6. **Error Handling**: If any environment in the group fails, the operation will continue with the remaining environments. A summary will be displayed at the end showing which environments succeeded and which failed.aggregation for easier analysis.
+
+## Output Aggregation
+
+By default, when running commands against a group of environments, the output is aggregated:
+
+1. **Column headers are shown only once** (from the first environment)
+2. **Each data row is prefixed** with the environment name
+3. **Results are combined** into a single, unified output
+
+To disable aggregation and get separate output per environment (the traditional behavior), use the `--no-agg` (`-n`) option.
+
+### Aggregated Output Example
+
+```bash
+lsql "SELECT current_database(), count(*) FROM users" -g staging
+```
+
+Output:
+```
+ current_database | count 
+------------------+-------
+staging | greenhouse_staging |  1250
+staging-s2 | greenhouse_staging |  1248  
+staging-s3 | greenhouse_staging |  1252
+```
+
+### Non-Aggregated Output Example
+
+```bash
+lsql "SELECT current_database(), count(*) FROM users" -g staging -n
+```
+
+Output shows separate result sets for each environment, as before.
+
+## Verbose Output Control
+
+By default, group operations show minimal progress information to keep the output clean:
+
+**Default (Non-Verbose) Mode:**
+- Shows simple progress: `Progress: .... done`
+- Only displays aggregated results at the end
+- Minimal connection information
+
+**Verbose Mode (`-v` flag):**
+- Shows detailed progress per environment
+- Displays connection information for each environment
+- Shows success/failure status for each environment
+
+### Verbose vs Non-Verbose Examples
+
+```bash
+# Non-verbose (default) - clean, minimal output
+lsql "SELECT count(*) FROM users" -g staging
+
+# Verbose - detailed progress information
+lsql "SELECT count(*) FROM users" -g staging -v
+```
 
 ## Configuration File
 
@@ -107,11 +168,21 @@ lsql "SELECT * FROM users LIMIT 10" -g dev -o user_sample
 
 ### Output Files with Groups
 
-When using the `-o` option with groups, the tool will create separate output files for each environment in the group. The environment name will be appended to the filename.
+When using the `-o` option with groups:
 
-For example:
-- `-o results` with group containing `dev01`, `dev02` will create `results_dev01` and `results_dev02`
-- `-o data.csv` with group containing `staging01`, `staging02` will create `data_staging01.csv` and `data_staging02.csv`
+**With Aggregation (default):**
+- Creates a single output file with aggregated results
+- Environment names are prefixed to each data row
+- Headers appear only once
+
+**Without Aggregation (`-n` flag):**
+- Creates separate output files for each environment
+- Environment name is appended to the filename
+- Each file contains complete result set for that environment
+
+Examples:
+- `-o results` with aggregation → single `results` file with prefixed data
+- `-o results -n` with group containing `staging`, `staging-s2` → creates `results_staging` and `results_staging-s2`
 
 ## Limitations
 
@@ -119,7 +190,9 @@ For example:
 
 2. **Mutual Exclusivity**: You cannot specify both `-e` (environment) and `-g` (group) options at the same time.
 
-3. **Error Handling**: If any environment in the group fails, the operation will continue with the remaining environments. A summary will be displayed at the end showing which environments succeeded and which failed.
+3. **Output Aggregation**: By default, group operations aggregate output. Use `-n` to disable aggregation and get separate outputs per environment.
+
+4. **Error Handling**: If any environment in the group fails, the operation will continue with the remaining environments. A summary will be displayed at the end showing which environments succeeded and which failed.
 
 ## Error Handling
 
@@ -136,18 +209,27 @@ The tool provides comprehensive error handling:
 # List all available groups
 lsql -g list
 
-# Execute a query on all staging environments
+# Execute a query on all staging environments (aggregated output, simple progress)
 lsql "SELECT version()" -g staging
+
+# Execute a query on all staging environments (aggregated output, verbose progress)  
+lsql "SELECT version()" -g staging -v
+
+# Execute a query on all staging environments (separate outputs, simple)
+lsql "SELECT version()" -g staging -n
+
+# Execute a query on all staging environments (separate outputs, verbose)
+lsql "SELECT version()" -g staging -n -v
 
 # Run a migration script on all US production environments
 lsql migrate.sql -g us-prod
 
-# Check database sizes across all production environments
+# Check database sizes across all production environments (aggregated)
 lsql "SELECT pg_size_pretty(pg_database_size(current_database()))" -g all-prod -o db_sizes
 
-# Run a complex query on EU environments only
-lsql complex_query.sql -g eu-prod -o eu_analysis_results
+# Run a complex query on EU environments with separate output files
+lsql complex_query.sql -g eu-prod -o eu_analysis_results -n
 
-# Check staging environments in AP Southeast
-lsql "SELECT current_timestamp" -g apse-staging
+# Check staging environments in AP Southeast (aggregated to stdout)
+lsql "SELECT current_timestamp, current_database()" -g apse-staging
 ```

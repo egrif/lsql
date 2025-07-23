@@ -42,23 +42,88 @@ module Lsql
       puts "Executing command for group '#{@options.group}' with environments: #{environments.join(', ')}"
       puts "=" * 60
 
+      # Initialize output aggregator if aggregation is enabled
+      aggregator = @options.no_agg ? nil : OutputAggregator.new(@options)
+      original_output_file = @options.output_file
+
+      # Initialize progress tracking for non-verbose mode (only for aggregated output)
+      spinner_chars = ['|', '/', '-', '\\']
+      spinner_index = 0
+      if !@options.verbose && !@options.no_agg
+        print "Progress: "
+        $stdout.flush
+      end
+
       results = []
       environments.each_with_index do |env, index|
-        puts "\n[#{index + 1}/#{environments.length}] Processing environment: #{env}"
-        puts "-" * 40
+        if @options.verbose
+          puts "\n[#{index + 1}/#{environments.length}] Processing environment: #{env}"
+          puts "-" * 40
+        elsif !@options.no_agg
+          # Show dot at the beginning of each query and start spinner
+          print "."
+          $stdout.flush
+        end
         
         # Create a copy of options with the current environment
         env_options = @options.dup
         env_options.env = env
         
+        # Start spinner for non-verbose aggregated mode
+        spinner_thread = nil
+        if !@options.verbose && !@options.no_agg
+          spinner_thread = Thread.new do
+            begin
+              loop do
+                print "\b#{spinner_chars[spinner_index % 4]}"
+                $stdout.flush
+                spinner_index += 1
+                sleep(0.2)
+              end
+            rescue ThreadError
+              # Thread was killed, exit cleanly
+            end
+          end
+        end
+        
         begin
-          result = execute_for_environment(env_options)
+          result = execute_for_environment(env_options, aggregator)
           results << { env: env, success: result }
-          puts "✓ Completed environment: #{env}"
+          
+          # Stop spinner and show completion
+          if !@options.verbose && !@options.no_agg && spinner_thread
+            spinner_thread.kill
+            spinner_thread.join(0.1)
+            print "\b "
+            $stdout.flush
+          elsif @options.verbose
+            puts "✓ Completed environment: #{env}"
+          end
         rescue => e
-          puts "✗ Failed environment: #{env} - #{e.message}"
+          # Stop spinner on error
+          if !@options.verbose && !@options.no_agg && spinner_thread
+            spinner_thread.kill
+            spinner_thread.join(0.1)
+            print "\b✗"
+            $stdout.flush
+          elsif @options.verbose
+            puts "✗ Failed environment: #{env} - #{e.message}"
+          end
           results << { env: env, success: false, error: e.message }
         end
+      end
+
+      # Complete the progress line for non-verbose mode (only for aggregated output)
+      if !@options.verbose && !@options.no_agg
+        puts " done"
+      end
+
+      # If using aggregation, output the aggregated results
+      if aggregator
+        puts "\n" + "=" * 60
+        puts "AGGREGATED OUTPUT"
+        puts "=" * 60
+        aggregator.aggregate_output(original_output_file)
       end
 
       print_summary(results)
@@ -170,12 +235,17 @@ module Lsql
       group_config['environments'] || []
     end
 
-    def execute_for_environment(env_options)
+    def execute_for_environment(env_options, aggregator = nil)
       # Setup environment
       EnvironmentManager.new(env_options)
 
-      # Setup output file if needed (modify filename to include environment)
-      output_manager = if env_options.output_file
+      # Setup output file if needed (modify filename to include environment or use aggregator)
+      output_manager = if aggregator
+                        # For aggregation, use a temporary file
+                        temp_file = aggregator.get_temp_file_for_env(env_options.env)
+                        env_options.output_file = temp_file
+                        OutputFileManager.new(env_options)
+                      elsif env_options.output_file
                         # Create environment-specific output file
                         original_output = env_options.output_file
                         if original_output == 'PLACEHOLDER'
@@ -202,7 +272,9 @@ module Lsql
       
       true
     rescue => e
-      puts "Error executing for environment #{env_options.env}: #{e.message}"
+      if @options.verbose
+        puts "Error executing for environment #{env_options.env}: #{e.message}"
+      end
       false
     end
 

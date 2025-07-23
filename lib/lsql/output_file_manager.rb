@@ -11,7 +11,12 @@ module Lsql
     def initialize(options)
       @options = options
       FileUtils.mkdir_p(DEFAULT_OUTPUT_DIR)
-      setup_output_file if @options.output_file
+      setup_output_file if @options.output_file && !temp_file?
+    end
+
+    def temp_file?
+      # Check if the output file is a temporary file (contains temp directory path and lsql_temp)
+      @options.output_file && @options.output_file.include?('lsql_temp')
     end
 
     def setup_output_file
