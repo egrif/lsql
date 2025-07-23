@@ -92,7 +92,8 @@ module Lsql
           @options.mode = mode
         end
 
-        opts.on('--clear-cache', 'Clear the persistent database URL cache') do
+        opts.on('--clear-cache', 'Clear the persistent database URL cache',
+                '  Cache backend: Redis (if REDIS_URL set) or local files (~/.lsql_cache)') do
           @options.clear_cache = true
         end
 
