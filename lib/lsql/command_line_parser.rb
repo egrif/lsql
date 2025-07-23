@@ -20,7 +20,10 @@ module Lsql
         verbose: false,
         clear_cache: false,
         cache_prefix: nil,
-        cache_stats: false
+        cache_stats: false,
+        cache_ttl: nil,
+        show_config: false,
+        init_config: false
       )
     end
 
@@ -101,12 +104,26 @@ module Lsql
 
         opts.on('--cache-prefix PREFIX', 'Custom cache key prefix (default: db_url)',
                 '  Cache keys use format: lsql:{prefix}:{space}_{env}_{region}_{app}',
-                '  Can also be set via LSQL_CACHE_PREFIX environment variable') do |prefix|
+                '  Can also be set via LSQL_CACHE_PREFIX environment variable or config file') do |prefix|
           @options.cache_prefix = prefix
+        end
+
+        opts.on('--cache-ttl MINUTES', Integer, 'Cache TTL in minutes (default: 10)',
+                '  How long database URLs are cached before requiring fresh lookup',
+                '  Can also be set via LSQL_CACHE_TTL environment variable or config file') do |ttl|
+          @options.cache_ttl = ttl
         end
 
         opts.on('--cache-stats', 'Show cache statistics and TTL information') do
           @options.cache_stats = true
+        end
+
+        opts.on('--show-config', 'Show current configuration settings') do
+          @options.show_config = true
+        end
+
+        opts.on('--init-config', 'Create default configuration file') do
+          @options.init_config = true
         end
 
         opts.on('-h', '--help', 'Display this help message') do
@@ -130,6 +147,15 @@ module Lsql
         opts.separator "  #{File.basename($PROGRAM_NAME)} --clear-cache                 # Clear persistent cached database URLs"
         opts.separator "  #{File.basename($PROGRAM_NAME)} --cache-prefix myapp --clear-cache # Clear cache with custom prefix"
         opts.separator "  #{File.basename($PROGRAM_NAME)} --cache-stats                 # Show cache statistics and TTL info"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} --show-config                 # Show current configuration settings"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} --init-config                 # Create default configuration file"
+        opts.separator ''
+        opts.separator 'Configuration:'
+        opts.separator '  Settings priority: CLI arguments > ~/.lsql_config.yml > environment variables > defaults'
+        opts.separator '  Configuration file example (~/.lsql_config.yml):'
+        opts.separator '    cache_prefix: "myteam"'
+        opts.separator '    cache_ttl_minutes: 15'
+        opts.separator '  Environment variables: LSQL_CACHE_PREFIX, LSQL_CACHE_TTL'
       end
 
       begin
@@ -140,8 +166,8 @@ module Lsql
         exit 1
       end
 
-      # Check required parameters (skip when clearing cache or showing stats)
-      unless @options.clear_cache || @options.cache_stats
+      # Check required parameters (skip when clearing cache, showing stats, config operations)
+      unless @options.clear_cache || @options.cache_stats || @options.show_config || @options.init_config
         if @options.env.nil? && @options.group.nil?
           puts 'Error: Either Environment (-e) or Group (-g) is required.'
           puts option_parser

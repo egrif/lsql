@@ -4,12 +4,13 @@ require 'cgi'
 
 module LSQL
   class CacheManager
-    TTL = 600 # 10 minutes in seconds
+    DEFAULT_TTL = 600 # 10 minutes in seconds (fallback)
     CACHE_DIR = File.expand_path('~/.lsql_cache')
     DEFAULT_CACHE_PREFIX = 'db_url'
 
-    def initialize(cache_prefix = nil)
+    def initialize(cache_prefix = nil, ttl_seconds = nil)
       @cache_prefix = cache_prefix || ENV['LSQL_CACHE_PREFIX'] || DEFAULT_CACHE_PREFIX
+      @ttl = ttl_seconds || DEFAULT_TTL
       @redis_enabled = !!ENV['REDIS_URL']
       @store = if @redis_enabled
                  create_redis_store
@@ -57,7 +58,7 @@ module LSQL
       store = Moneta.new(:File, 
                          dir: CACHE_DIR, 
                          expires: true, 
-                         default_expires: TTL)
+                         default_expires: @ttl)
       
       # Clean up expired entries on initialization
       cleanup_expired_entries(store)
@@ -96,10 +97,10 @@ module LSQL
 
     def set(key, value)
       if redis_store?
-        @store.store(key, value, expires: TTL)
+        @store.store(key, value, expires: @ttl)
       else
         # For file store, use explicit expiration to ensure TTL works
-        @store.store(key, value, expires: TTL)
+        @store.store(key, value, expires: @ttl)
       end
     end
 
@@ -177,14 +178,24 @@ module LSQL
         backend: backend,
         prefix: @cache_prefix,
         total_entries: total_keys,
-        ttl_seconds: TTL
+        ttl_seconds: @ttl
       }
     end
 
-    def self.instance(cache_prefix = nil)
-      cache_prefix ||= ENV['LSQL_CACHE_PREFIX'] || DEFAULT_CACHE_PREFIX
+    def self.instance(cache_prefix = nil, ttl_seconds = nil)
+      # Use ConfigManager to resolve values with proper priority
+      effective_prefix = LSQL::ConfigManager.get_cache_prefix(cache_prefix, ENV['LSQL_CACHE_PREFIX'])
+      effective_ttl = if ttl_seconds
+                        ttl_seconds
+                      elsif ENV['LSQL_CACHE_TTL']
+                        ENV['LSQL_CACHE_TTL'].to_i * 60  # Convert minutes to seconds
+                      else
+                        LSQL::ConfigManager.get_cache_ttl
+                      end
+      
+      cache_key = "#{effective_prefix}_#{effective_ttl}"
       @instances ||= {}
-      @instances[cache_prefix] ||= new(cache_prefix)
+      @instances[cache_key] ||= new(effective_prefix, effective_ttl)
     end
 
     def self.clear_all_instances

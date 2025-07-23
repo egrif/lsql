@@ -11,7 +11,11 @@ module Lsql
     def initialize(options)
       @options = options
       @mode_display = ''
-      @cache = LSQL::CacheManager.instance(@options.cache_prefix)
+      
+      # Calculate TTL in seconds if provided in minutes
+      cache_ttl = @options.cache_ttl && @options.cache_ttl * 60  # Convert minutes to seconds if provided
+      
+      @cache = LSQL::CacheManager.instance(@options.cache_prefix, cache_ttl)
     end
 
     def get_database_url
@@ -35,7 +39,7 @@ module Lsql
 
           # Cache the original URL with all parameters for uniqueness
           @cache.cache_url_for_params(@options.space, @options.env, @options.region, @options.application, cached_url)
-          puts "Cached database URL for #{@options.env} (space: #{@options.space}, region: #{@options.region}, app: #{@options.application}) - TTL: 10 minutes" if @options.verbose
+          puts "Cached database URL for #{@options.env} (space: #{@options.space}, region: #{@options.region}, app: #{@options.application}) - TTL: #{@cache.cache_stats[:ttl_seconds] / 60} minutes" if @options.verbose
         else
           puts "Failed to retrieve DATABASE_MAIN_URL: #{stderr}"
           exit 1
