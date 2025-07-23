@@ -11,17 +11,15 @@ module Lsql
     def initialize(options)
       @options = options
       @mode_display = ''
-      @cache = LSQL::CacheManager.instance
+      @cache = LSQL::CacheManager.instance(@options.cache_prefix)
     end
 
     def get_database_url
-      environment_key = "#{@options.space}_#{@options.env}_#{@options.region}_#{@options.application}"
-      
-      # Check if URL is cached
+      # Check if URL is cached using all lotus parameters for uniqueness
       cached_url = nil
-      if @cache.url_cached?(environment_key)
-        puts "Using cached database URL for #{@options.env}" if @options.verbose
-        cached_url = @cache.get_cached_url(environment_key)
+      if @cache.url_cached_for_params?(@options.space, @options.env, @options.region, @options.application)
+        puts "Using cached database URL for #{@options.env} (space: #{@options.space}, region: #{@options.region}, app: #{@options.application})" if @options.verbose
+        cached_url = @cache.get_cached_url_for_params(@options.space, @options.env, @options.region, @options.application)
       else
         # Always get the main database URL - never use any other secret name
         cmd = "lotus secret get DATABASE_MAIN_URL -s \"#{@options.space}\" -e \"#{@options.env}\" -r \"#{@options.region}\" -a \"#{@options.application}\""
@@ -35,9 +33,9 @@ module Lsql
             exit 1
           end
 
-          # Cache the original URL
-          @cache.cache_url(environment_key, cached_url)
-          puts "Cached database URL for #{@options.env} (TTL: 10 minutes)" if @options.verbose
+          # Cache the original URL with all parameters for uniqueness
+          @cache.cache_url_for_params(@options.space, @options.env, @options.region, @options.application, cached_url)
+          puts "Cached database URL for #{@options.env} (space: #{@options.space}, region: #{@options.region}, app: #{@options.application}) - TTL: 10 minutes" if @options.verbose
         else
           puts "Failed to retrieve DATABASE_MAIN_URL: #{stderr}"
           exit 1

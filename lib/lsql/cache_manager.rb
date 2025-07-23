@@ -5,8 +5,10 @@ module LSQL
   class CacheManager
     TTL = 600 # 10 minutes in seconds
     CACHE_DIR = File.expand_path('~/.lsql_cache')
+    DEFAULT_CACHE_PREFIX = 'db_url'
 
-    def initialize
+    def initialize(cache_prefix = nil)
+      @cache_prefix = cache_prefix || ENV['LSQL_CACHE_PREFIX'] || DEFAULT_CACHE_PREFIX
       @redis_enabled = !!ENV['REDIS_URL']
       @store = if @redis_enabled
                  create_redis_store
@@ -79,31 +81,62 @@ module LSQL
       @redis_enabled && @redis_connection_successful
     end
 
-    def cache_key_for_url(environment)
-      "db_url_#{environment}"
+    def cache_key_for_url(environment_composite)
+      # environment_composite should be in format: "space_env_region_application"
+      "lsql:#{@cache_prefix}:#{environment_composite}"
     end
 
-    def get_cached_url(environment)
-      key = cache_key_for_url(environment)
+    def get_cached_url(environment_composite)
+      key = cache_key_for_url(environment_composite)
       get(key)
     end
 
-    def cache_url(environment, url)
-      key = cache_key_for_url(environment)
+    def cache_url(environment_composite, url)
+      key = cache_key_for_url(environment_composite)
       set(key, url)
     end
 
-    def url_cached?(environment)
-      key = cache_key_for_url(environment)
+    def url_cached?(environment_composite)
+      key = cache_key_for_url(environment_composite)
       cached?(key)
     end
+
+    # Convenience method that takes individual parameters
+    def cache_url_for_params(space, env, region, application, url)
+      composite_key = build_environment_key(space, env, region, application)
+      cache_url(composite_key, url)
+    end
+
+    def get_cached_url_for_params(space, env, region, application)
+      composite_key = build_environment_key(space, env, region, application)
+      get_cached_url(composite_key)
+    end
+
+    def url_cached_for_params?(space, env, region, application)
+      composite_key = build_environment_key(space, env, region, application)
+      url_cached?(composite_key)
+    end
+
+    private
+
+    def build_environment_key(space, env, region, application)
+      "#{space}_#{env}_#{region}_#{application}"
+    end
+
+    public
 
     def clear_cache
       @store.clear
     end
 
-    def self.instance
-      @instance ||= new
+    def self.instance(cache_prefix = nil)
+      cache_prefix ||= ENV['LSQL_CACHE_PREFIX'] || DEFAULT_CACHE_PREFIX
+      @instances ||= {}
+      @instances[cache_prefix] ||= new(cache_prefix)
+    end
+
+    def self.clear_all_instances
+      @instances = {}
     end
   end
 end

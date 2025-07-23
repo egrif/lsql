@@ -18,7 +18,8 @@ module Lsql
         group: nil,
         no_agg: false,
         verbose: false,
-        clear_cache: false
+        clear_cache: false,
+        cache_prefix: nil
       )
     end
 
@@ -97,6 +98,12 @@ module Lsql
           @options.clear_cache = true
         end
 
+        opts.on('--cache-prefix PREFIX', 'Custom cache key prefix (default: db_url)',
+                '  Cache keys use format: lsql:{prefix}:{space}_{env}_{region}_{app}',
+                '  Can also be set via LSQL_CACHE_PREFIX environment variable') do |prefix|
+          @options.cache_prefix = prefix
+        end
+
         opts.on('-h', '--help', 'Display this help message') do
           puts opts
           exit
@@ -116,6 +123,7 @@ module Lsql
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -v # Run query with verbose progress output"
         opts.separator "  #{File.basename($PROGRAM_NAME)} -g list                        # List all available groups"
         opts.separator "  #{File.basename($PROGRAM_NAME)} --clear-cache                 # Clear persistent cached database URLs"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} --cache-prefix myapp --clear-cache # Clear cache with custom prefix"
       end
 
       begin

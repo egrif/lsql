@@ -25,7 +25,7 @@ module Lsql
 
       # Handle cache clearing if requested
       if options.clear_cache
-        cache = LSQL::CacheManager.instance
+        cache = LSQL::CacheManager.instance(options.cache_prefix)
         cache.clear_cache
         puts 'Database URL cache cleared successfully'
         return
