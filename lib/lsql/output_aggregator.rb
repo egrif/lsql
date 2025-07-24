@@ -47,19 +47,21 @@ module Lsql
             # For the first environment, write the header with environment column
             header_lines = extract_header_lines(lines)
             if header_lines.any?
-              # Add environment column to the header
-              env_header = 'environment'.ljust(max_env_length)
+              # Calculate proper column width (at least 3 chars for "env", but adjust to fit longest env name)
+              env_column_width = [3, max_env_length].max
+              env_header = 'env'.ljust(env_column_width)
+
               header_lines.each_with_index do |line, line_index|
                 if line.match?(/^\s*-+(\s*\|\s*-+)*\s*$/)
                   # Separator line - add dashes for environment column with proper spacing
-                  env_separator = '-' * max_env_length
+                  env_separator = '-' * env_column_width
                   output_stream.puts "#{env_separator} | #{line.chomp}"
                 elsif line_index.zero? && !line.strip.empty?
                   # First header line - add environment column
                   output_stream.puts "#{env_header} | #{line.chomp}"
                 else
                   # Other header lines (empty lines, etc.)
-                  padding = ' ' * max_env_length
+                  padding = ' ' * env_column_width
                   output_stream.puts "#{padding} | #{line.chomp}"
                 end
               end
@@ -149,7 +151,9 @@ module Lsql
       clean_line = line.chomp
       return clean_line if clean_line.strip.empty?
 
-      padded_env = env.ljust(max_env_length)
+      # Use the same column width calculation as in the header
+      env_column_width = [3, max_env_length].max
+      padded_env = env.ljust(env_column_width)
       "#{padded_env} | #{clean_line}"
     end
   end
