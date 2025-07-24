@@ -24,11 +24,11 @@ lsql "SELECT current_database(), count(*) FROM users" -g staging
 
 Output:
 ```
- current_database | count 
-------------------+-------
-staging | greenhouse_staging |  1250
-staging-s2 | greenhouse_staging |  1248  
-staging-s3 | greenhouse_staging |  1252
+environment | current_database    | count 
+------------ | ------------------- | -------
+staging     | greenhouse_staging  |  1250
+staging-s2  | greenhouse_staging  |  1248  
+staging-s3  | greenhouse_staging  |  1252
 ```
 
 ### Non-Aggregated Output Example

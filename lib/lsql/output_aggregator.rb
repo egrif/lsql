@@ -50,10 +50,10 @@ module Lsql
               # Add environment column to the header
               env_header = 'environment'.ljust(max_env_length)
               header_lines.each_with_index do |line, line_index|
-                if line.match?(/^\s*-+(\+.*)?-*\s*$/)
-                  # Separator line - add dashes for environment column
+                if line.match?(/^\s*-+(\s*\|\s*-+)*\s*$/)
+                  # Separator line - add dashes for environment column with proper spacing
                   env_separator = '-' * max_env_length
-                  output_stream.puts "#{env_separator}-+-#{line.chomp}"
+                  output_stream.puts "#{env_separator} | #{line.chomp}"
                 elsif line_index.zero? && !line.strip.empty?
                   # First header line - add environment column
                   output_stream.puts "#{env_header} | #{line.chomp}"
@@ -95,7 +95,7 @@ module Lsql
 
       lines.each_with_index do |line, index|
         # Include header lines and the separator line
-        if line.match?(/^\s*-+(\+.*)?-*\s*$/) || line.match?(/^\s*=+\s*$/)
+        if line.match?(/^\s*-+(\s*\|\s*-+)*\s*$/) || line.match?(/^\s*=+\s*$/)
           # This is a separator line - include it and stop
           header_lines << line
           break
@@ -116,7 +116,7 @@ module Lsql
       found_separator = false
 
       lines.each do |line|
-        if line.match?(/^\s*-+(\+.*)?-*\s*$/) || line.match?(/^\s*=+\s*$/)
+        if line.match?(/^\s*-+(\s*\|\s*-+)*\s*$/) || line.match?(/^\s*=+\s*$/)
           found_separator = true
           next
         end

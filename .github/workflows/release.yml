@@ -97,12 +97,21 @@ jobs:
             This release was automatically created when the version was updated.
             
             ### Installation
+            
+            #### From GitHub Packages
             ```bash
-            # Install from GitHub releases
+            # Configure access to GitHub Packages
+            gem install lsql --source "https://rubygems.pkg.github.com/${{ github.repository_owner }}"
+            ```
+            
+            #### From GitHub Releases
+            ```bash
             wget https://github.com/${{ github.repository }}/releases/download/v${{ needs.check-version.outputs.version }}/lsql-${{ needs.check-version.outputs.version }}.gem
             gem install lsql-${{ needs.check-version.outputs.version }}.gem
+            ```
             
-            # Or install from source
+            #### From Source
+            ```bash
             git clone https://github.com/${{ github.repository }}.git
             cd lsql
             gem build lsql.gemspec
@@ -138,6 +147,15 @@ jobs:
           chmod 0600 ~/.gem/credentials
           gem push ${{ env.GEM_FILE }}
 
+      - name: Publish to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p ~/.gem
+          echo ":github: Bearer $GITHUB_TOKEN" > ~/.gem/credentials
+          chmod 0600 ~/.gem/credentials
+          gem push --key github --host https://rubygems.pkg.github.com/${{ github.repository_owner }} ${{ env.GEM_FILE }}
+
       - name: Post-release summary
         run: |
           echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
@@ -145,8 +163,14 @@ jobs:
           echo "- **Gem File**: ${{ env.GEM_FILE }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Release URL**: ${{ steps.create_release.outputs.html_url }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Tests**: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- **GitHub Packages**: ✅ Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Installation Command" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation Commands" >> $GITHUB_STEP_SUMMARY
+          echo '#### From GitHub Packages' >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "gem install lsql --source \"https://rubygems.pkg.github.com/${{ github.repository_owner }}\"" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo '#### From GitHub Releases' >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
           echo "gem install lsql-${{ needs.check-version.outputs.version }}.gem" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY

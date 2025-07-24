@@ -14,6 +14,30 @@ A powerful command-line SQL tool for Lotus environments with support for paralle
 - 🤫 **Quiet Mode**: Suppress headers and summaries for clean automation output
 ## Installation
 
+### From GitHub Packages (Recommended)
+```bash
+# Configure bundler to use GitHub Packages
+bundle config set --global https://rubygems.pkg.github.com/egrif USERNAME:TOKEN
+
+# Install the gem
+gem install lsql --source "https://rubygems.pkg.github.com/egrif"
+
+# Or add to your Gemfile
+# source "https://rubygems.pkg.github.com/egrif" do
+#   gem "lsql"
+# end
+```
+
+### From GitHub Repository
+```bash
+# Install directly from GitHub
+gem install specific_install
+gem specific_install https://github.com/egrif/lsql.git
+
+# Or using bundler in a Gemfile
+# gem 'lsql', git: 'https://github.com/egrif/lsql.git'
+```
+
 ### From GitHub Releases
 ```bash
 # Download the latest release

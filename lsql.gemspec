@@ -18,6 +18,7 @@ Gem::Specification.new do |spec|
   spec.metadata['homepage_uri'] = spec.homepage
   spec.metadata['source_code_uri'] = 'https://github.com/egrif/lsql'
   spec.metadata['changelog_uri'] = 'https://github.com/egrif/lsql/blob/main/CHANGELOG.md'
+  spec.metadata['github_repo'] = 'https://github.com/egrif/lsql'
   spec.metadata['rubygems_mfa_required'] = 'true'
 
   # Specify which files should be added to the gem when it is released.
