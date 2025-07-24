@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    lsql (1.1.2)
+    lsql (1.2.0)
       concurrent-ruby (>= 1.1, < 2.0)
       moneta (>= 1.0, < 2.0)
       redis (>= 4.0, < 6.0)

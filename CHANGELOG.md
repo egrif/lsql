@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-07-24
+
+### Added
+- **GitHub Packages Publishing**: Automated gem publishing to GitHub Packages
+  - Workflow automatically publishes new versions on release creation
+  - Users can install without requiring RubyGems.org account
+  - Includes setup script (`setup_github_packages.sh`) for easy configuration
+- **Quiet Mode**: New `-q/--quiet` option to suppress execution summary and output headers
+  - Reduces output to just the query results for cleaner automation and scripting
+  - Suppresses "AGGREGATED OUTPUT" headers and "EXECUTION SUMMARY" sections
+  - Maintains all functionality while providing minimal output
+
+### Fixed
+- **Column Alignment**: Improved table formatting in aggregated group output
+  - Fixed regex pattern for detecting table separator lines
+  - Better handling of psql table delimiters with proper `|` character detection
+  - Consistent column alignment across multiple environment outputs
+- **Ruby 3.1 Compatibility**: Fixed CI failures and compatibility issues
+- **Code Quality**: Resolved all RuboCop style violations across codebase
+
+### Changed
+- **Execution Summary Format**: Successful environments now displayed on a single comma-separated line
+  - Before: Each environment listed on separate lines with bullet points
+  - After: All successful environments on one line (e.g., "staging, staging-s2, staging-s3")
+  - Failed environments still display individually with error messages for better debugging
+
 ## [1.1.2] - 2025-07-24
 
 ### Added
