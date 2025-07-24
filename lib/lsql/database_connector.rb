@@ -22,9 +22,7 @@ module Lsql
       # Check if URL is cached using all lotus parameters for uniqueness
       cached_url = nil
       if @cache.url_cached_for_params?(@options.space, @options.env, @options.region, @options.application)
-        if @options.verbose
-          puts "Using cached database URL for #{@options.env} (space: #{@options.space}, region: #{@options.region}, app: #{@options.application})"
-        end
+        puts "Using cached database URL for #{@options.env} (space: #{@options.space}, region: #{@options.region}, app: #{@options.application})" if @options.verbose
         cached_url = @cache.get_cached_url_for_params(@options.space, @options.env, @options.region,
                                                       @options.application)
       else

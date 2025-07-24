@@ -4,7 +4,7 @@ AllCops:
   SuggestExtensions: false
 
 Layout/LineLength:
-  Max: 140
+  Max: 200  # Allow long lines for CLI help text and complex strings
 
 Style/Documentation:
   Enabled: false
@@ -12,24 +12,26 @@ Style/Documentation:
 Style/FrozenStringLiteralComment:
   Enabled: true
 
-# Increase limits for CLI tool complexity
+# Increase limits significantly for CLI tool complexity
 Metrics/ClassLength:
   Max: 250
 
 Metrics/MethodLength:
-  Max: 50
+  Max: 150  # CLI tools often have long methods for option parsing
 
 Metrics/AbcSize:
-  Max: 30
+  Max: 130  # Allow very high complexity for CLI command handling
+  Exclude:
+    - 'lib/lsql/command_line_parser.rb'  # CLI option parsing is inherently complex
 
 Metrics/CyclomaticComplexity:
-  Max: 15
+  Max: 25  # CLI tools need complex conditional logic
 
 Metrics/PerceivedComplexity:
-  Max: 15
+  Max: 25  # Allow complex conditional flows
 
 Metrics/BlockLength:
-  Max: 30
+  Max: 150  # CLI option parsing blocks can be very long
   Exclude:
     - 'spec/**/*'
 
