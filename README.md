@@ -11,14 +11,14 @@ A powerful command-line SQL tool for Lotus environments with support for paralle
 - 📊 **Progress Tracking**: Real-time progress indicators and execution summaries
 - 🔄 **Multiple Replicas**: Support for read-only, secondary, and custom replicas
 - 📁 **Output Management**: Aggregated or per-environment output files
-- Support for read-only replicas
+- 🤫 **Quiet Mode**: Suppress headers and summaries for clean automation output
 ## Installation
 
 ### From GitHub Releases
 ```bash
 # Download the latest release
-wget https://github.com/egrif/lsql/releases/latest/download/lsql-1.1.0.gem
-gem install lsql-1.1.0.gem
+wget https://github.com/egrif/lsql/releases/latest/download/lsql-1.1.2.gem
+gem install lsql-1.1.2.gem
 ```
 
 ### From Source
@@ -26,7 +26,7 @@ gem install lsql-1.1.0.gem
 git clone https://github.com/egrif/lsql.git
 cd lsql
 gem build lsql.gemspec
-gem install ./lsql-1.1.0.gem
+gem install ./lsql-1.1.2.gem
 ```
 
 ## Quick Start
@@ -49,6 +49,11 @@ gem install ./lsql-1.1.0.gem
 4. **Run Query on Group with Parallel Execution**:
    ```bash
    lsql "SELECT count(*) FROM users" -g staging -p 4
+   ```
+
+5. **Get Clean Results for Automation**:
+   ```bash
+   lsql "SELECT count(*) FROM orders" -g staging -q
    ```
 
 ## Configuration
@@ -112,6 +117,9 @@ lsql "SELECT * FROM users" -g staging -p 4
 # Verbose parallel execution
 lsql "SELECT count(*) FROM products" -g staging -p 4 -v
 
+# Quiet mode for clean output (no headers or summaries)
+lsql "SELECT count(*) FROM users" -g staging -q
+
 # No output aggregation (separate results)
 lsql "SELECT count(*) FROM users" -g staging -n
 ```
@@ -127,6 +135,9 @@ lsql "SELECT count(*) FROM users" -e prod01 -m secondary   # Secondary replica
 
 # Custom region/application
 lsql "SELECT 1" -e dev01 -r euc1 -a myapp
+
+# Quiet mode for automation/scripting
+lsql "SELECT count(*) FROM users" -g staging -q > user_counts.txt
 ```
 
 ### Cache Management
@@ -158,6 +169,7 @@ lsql --init-config
 | `-g GROUP` | Execute against environment group |
 | `-p [THREADS]` | Enable parallel execution (auto-detect cores or specify count) |
 | `-v` | Verbose output with detailed progress |
+| `-q` | Quiet mode: suppress execution summary and output headers |
 | `-n` | Disable output aggregation for group operations |
 | `-o [FILE]` | Output file (auto-generated if no filename provided) |
 | `-r REGION` | Override default region (use1/euc1/apse2) |
@@ -192,8 +204,51 @@ lsql "SELECT count(*) FROM orders" -g production -p 8
 # Parallel with verbose output
 lsql "SELECT count(*) FROM products" -g staging -p 4 -v
 
+# Parallel with quiet mode (clean output for automation)
+lsql "SELECT count(*) FROM users" -g staging -p 4 -q
+
 # Parallel with separate output files
 lsql query.sql -g staging -p 4 -n -o results
+```
+
+## Quiet Mode
+
+The `--quiet` (or `-q`) option suppresses execution summaries and output headers, providing clean results perfect for automation and scripting:
+
+### Normal Output
+```
+============================================================
+AGGREGATED OUTPUT
+============================================================
+[Query results here]
+
+============================================================
+EXECUTION SUMMARY
+============================================================
+✓ Successful: 3
+  staging, staging-s2, staging-s3
+
+Total environments processed: 3
+```
+
+### Quiet Output
+```
+[Query results only - no headers or summaries]
+```
+
+### Quiet Mode Examples
+```bash
+# Save clean query results to file
+lsql "SELECT id, name FROM users" -g staging -q > users.csv
+
+# Use in scripts for automated reporting
+COUNT=$(lsql "SELECT count(*) FROM orders" -g production -q)
+
+# Chain with other commands
+lsql "SELECT email FROM users WHERE active = true" -g staging -q | grep -E "@company\.com$"
+
+# Combine with parallel execution for performance
+lsql "SELECT * FROM large_table" -g staging -p 4 -q > results.txt
 ```
 
 ## Environment Variables

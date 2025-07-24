@@ -18,6 +18,7 @@ module Lsql
         group: nil,
         no_agg: false,
         verbose: false,
+        quiet: false,
         clear_cache: false,
         cache_prefix: nil,
         cache_stats: false,
@@ -67,6 +68,11 @@ module Lsql
         opts.on('-v', '--verbose', 'Enable verbose output for group operations',
                 '  Shows detailed progress per environment (default: simple progress dots)') do
           @options.verbose = true
+        end
+
+        opts.on('-q', '--quiet', 'Suppress execution summary and output headers',
+                '  Reduces output to just the query results') do
+          @options.quiet = true
         end
 
         opts.on('-o [OUTPUT_FILE]', 'Output file (optional)',

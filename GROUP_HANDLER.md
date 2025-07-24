@@ -63,6 +63,45 @@ lsql "SELECT count(*) FROM users" -g staging
 lsql "SELECT count(*) FROM users" -g staging -v
 ```
 
+## Quiet Mode
+
+For automation and scripting scenarios, you can use the `--quiet` (or `-q`) option to suppress execution summaries and output headers:
+
+### Normal Group Output
+```
+============================================================
+AGGREGATED OUTPUT
+============================================================
+[Query results here]
+
+============================================================
+EXECUTION SUMMARY
+============================================================
+✓ Successful: 3
+  staging, staging-s2, staging-s3
+
+Total environments processed: 3
+```
+
+### Quiet Group Output
+```
+[Query results only - no headers, no execution summary]
+```
+
+### Quiet Mode Examples
+
+```bash
+# Clean output for automation
+lsql "SELECT count(*) FROM users" -g staging -q
+
+# Combine with other options
+lsql "SELECT count(*) FROM orders" -g staging -p 4 -q > results.txt
+
+# Perfect for scripting
+COUNT=$(lsql "SELECT count(*) FROM users" -g staging -q)
+echo "Total users across staging: $COUNT"
+```
+
 ## Configuration File
 
 Groups are defined in a YAML configuration file named `.lsql_groups.yml`. The tool will search for this file starting from the current directory and moving up the directory tree until it finds one or reaches the root.

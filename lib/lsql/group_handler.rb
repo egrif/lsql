@@ -69,9 +69,11 @@ module Lsql
           puts "File: #{original_output_file}"
         else
           # When no output file specified, display aggregated results to stdout
-          puts "\n#{'=' * 60}"
-          puts 'AGGREGATED OUTPUT'
-          puts '=' * 60
+          unless @options.quiet
+            puts "\n#{'=' * 60}"
+            puts 'AGGREGATED OUTPUT'
+            puts '=' * 60
+          end
           aggregator.aggregate_output(original_output_file)
         end
       end
@@ -295,6 +297,8 @@ module Lsql
     end
 
     def print_summary(results)
+      return if @options.quiet
+
       puts "\n#{'=' * 60}"
       puts 'EXECUTION SUMMARY'
       puts '=' * 60
@@ -303,7 +307,7 @@ module Lsql
       failed = results.reject { |r| r[:success] }
 
       puts "✓ Successful: #{successful.length}"
-      successful.each { |r| puts "  - #{r[:env]}" }
+      puts "  #{successful.map { |r| r[:env] }.join(', ')}" if successful.any?
 
       if failed.any?
         puts "\n✗ Failed: #{failed.length}"
