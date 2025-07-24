@@ -2,6 +2,7 @@
 
 require 'yaml'
 require 'pathname'
+require 'concurrent-ruby'
 
 module Lsql
   # Handles group-based operations across multiple environments
@@ -40,6 +41,10 @@ module Lsql
       end
 
       puts "Executing command for group '#{@options.group}' with environments: #{environments.join(', ')}"
+      if @options.parallel
+        thread_count = @options.parallel == 0 ? Concurrent.processor_count : @options.parallel
+        puts "Using parallel execution with #{thread_count} threads"
+      end
       puts "=" * 60
 
       # Initialize output aggregator if aggregation is enabled
@@ -47,6 +52,37 @@ module Lsql
       aggregator = @options.no_agg ? nil : OutputAggregator.new(@options)
       original_output_file = @options.output_file
 
+      # Execute environments (parallel or sequential)
+      results = if @options.parallel
+                  execute_environments_parallel(environments, aggregator)
+                else
+                  execute_environments_sequential(environments, aggregator)
+                end
+
+      # If using aggregation, handle output appropriately
+      if aggregator
+        if original_output_file
+          # When outputting to a file, don't display aggregated results to stdout
+          # Just aggregate to the file and show the file path
+          aggregator.aggregate_output(original_output_file)
+          puts "\n" + "=" * 60
+          puts "OUTPUT WRITTEN TO FILE"
+          puts "=" * 60
+          puts "File: #{original_output_file}"
+        else
+          # When no output file specified, display aggregated results to stdout
+          puts "\n" + "=" * 60
+          puts "AGGREGATED OUTPUT"
+          puts "=" * 60
+          aggregator.aggregate_output(original_output_file)
+        end
+      end
+
+      print_summary(results)
+      true
+    end
+
+    def execute_environments_sequential(environments, aggregator)
       # Initialize progress tracking for non-verbose mode (only for aggregated output)
       spinner_chars = ['|', '/', '-', '\\']
       spinner_index = 0
@@ -58,7 +94,8 @@ module Lsql
       results = []
       environments.each_with_index do |env, index|
         if @options.verbose
-          puts "\n[#{index + 1}/#{environments.length}] Processing environment: #{env}"
+          puts "
+[#{index + 1}/#{environments.length}] Processing environment: #{env}"
           puts "-" * 40
         elsif !@options.no_agg
           # Show dot at the beginning of each query and start spinner
@@ -118,28 +155,95 @@ module Lsql
       if !@options.verbose && !@options.no_agg
         puts " done"
       end
+      
+      results
+    end
 
-      # If using aggregation, handle output appropriately
-      if aggregator
-        if original_output_file
-          # When outputting to a file, don't display aggregated results to stdout
-          # Just aggregate to the file and show the file path
-          aggregator.aggregate_output(original_output_file)
-          puts "\n" + "=" * 60
-          puts "OUTPUT WRITTEN TO FILE"
-          puts "=" * 60
-          puts "File: #{original_output_file}"
+    def execute_environments_parallel(environments, aggregator)
+      thread_count = @options.parallel == 0 ? Concurrent.processor_count : @options.parallel
+      
+      # Use a thread pool for controlled concurrency
+      pool = Concurrent::FixedThreadPool.new(thread_count)
+      
+      # Shared state for progress tracking
+      completed = Concurrent::AtomicFixnum.new(0)
+      total = environments.length
+      
+      # Progress tracking for parallel execution
+      progress_thread = nil
+      if !@options.verbose
+        if @options.no_agg
+          puts "Processing #{environments.length} environments in parallel..."
         else
-          # When no output file specified, display aggregated results to stdout
-          puts "\n" + "=" * 60
-          puts "AGGREGATED OUTPUT"
-          puts "=" * 60
-          aggregator.aggregate_output(original_output_file)
+          print "Progress: "
+          $stdout.flush
+          progress_thread = Thread.new do
+            begin
+              spinner_chars = ['|', '/', '-', '\\']
+              spinner_index = 0
+              loop do
+                current = completed.value
+                print "\r#{' ' * 50}\rProgress: #{'.' * current}#{spinner_chars[spinner_index % 4]} (#{current}/#{total})"
+                $stdout.flush
+                spinner_index += 1
+                sleep(0.2)
+                break if current >= total
+              end
+            rescue ThreadError
+              # Thread was killed, exit cleanly
+            end
+          end
         end
       end
-
-      print_summary(results)
-      true
+      
+      # Submit all tasks to the thread pool
+      futures = environments.map do |env|
+        Concurrent::Future.execute(executor: pool) do
+          env_options = @options.dup
+          env_options.env = env
+          
+          if @options.verbose
+            puts "[PARALLEL] Starting environment: #{env}"
+          end
+          
+          begin
+            result = execute_for_environment(env_options, aggregator)
+            completed.increment
+            
+            if @options.verbose
+              puts "[PARALLEL] ✓ Completed environment: #{env}"
+            end
+            
+            { env: env, success: result }
+          rescue => e
+            completed.increment
+            
+            if @options.verbose
+              puts "[PARALLEL] ✗ Failed environment: #{env} - #{e.message}"
+            end
+            
+            { env: env, success: false, error: e.message }
+          end
+        end
+      end
+      
+      # Wait for all tasks to complete
+      results = futures.map(&:value!)
+      
+      # Clean up progress thread
+      if progress_thread
+        progress_thread.kill
+        progress_thread.join(0.1)
+        puts "\r#{' ' * 50}\rProgress: #{'.' * total} done (#{total}/#{total})"
+      elsif !@options.verbose && @options.no_agg
+        puts "All environments completed."
+      end
+      
+      # Shutdown the thread pool
+      pool.shutdown
+      pool.wait_for_termination(30) # Wait up to 30 seconds for clean shutdown
+      
+      results
     end
 
     def list_groups

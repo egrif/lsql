@@ -46,7 +46,6 @@ groups:
     environments:
     - staging
     - staging-s2
-    - staging-s3
   eu-staging:
     description: All EU staging environments
     environments:

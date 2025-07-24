@@ -23,7 +23,8 @@ module Lsql
         cache_stats: false,
         cache_ttl: nil,
         show_config: false,
-        init_config: false
+        init_config: false,
+        parallel: nil
       )
     end
 
@@ -55,6 +56,12 @@ module Lsql
         opts.on('-n', '--no-agg', 'Disable output aggregation for group operations',
                 '  By default, group output is aggregated with environment prefixes') do
           @options.no_agg = true
+        end
+
+        opts.on('-p', '--parallel [THREADS]', Integer, 'Enable parallel execution for group operations',
+                '  Specify number of concurrent threads (default: number of CPU cores)',
+                '  Use with caution - high concurrency may impact database performance') do |threads|
+          @options.parallel = threads || 0  # 0 means auto-detect CPU cores
         end
 
         opts.on('-v', '--verbose', 'Enable verbose output for group operations',
@@ -143,6 +150,8 @@ module Lsql
         opts.separator "  #{File.basename($PROGRAM_NAME)} query.sql -g us-prod -o results    # Run query file on all US production environments"
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -n # Run query with separate output per environment"
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -v # Run query with verbose progress output"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -p # Run query with parallel execution (auto CPU cores)"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -p 4 # Run query with 4 parallel threads"
         opts.separator "  #{File.basename($PROGRAM_NAME)} -g list                        # List all available groups"
         opts.separator "  #{File.basename($PROGRAM_NAME)} --clear-cache                 # Clear persistent cached database URLs"
         opts.separator "  #{File.basename($PROGRAM_NAME)} --cache-prefix myapp --clear-cache # Clear cache with custom prefix"
