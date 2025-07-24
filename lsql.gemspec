@@ -30,7 +30,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   # Runtime dependencies
-  spec.add_dependency 'optparse', '~> 0.4.0'
+  spec.add_dependency 'optparse', '>= 0.4', '< 0.7'
   spec.add_dependency 'moneta', '~> 1.0'
   spec.add_dependency 'redis', '~> 5.0'
   spec.add_dependency 'concurrent-ruby', '~> 1.2'
