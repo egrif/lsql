@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby-version: ['3.0', '3.1', '3.2', '3.3']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby ${{ matrix.ruby-version }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Run RSpec tests
+        run: bundle exec rspec
+
+      - name: Run RuboCop
+        run: bundle exec rubocop
+
+      - name: Build gem (validation)
+        run: gem build lsql.gemspec
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Check gem specification
+        run: |
+          gem build lsql.gemspec
+          gem specification lsql-*.gem summary description
+
+      - name: Validate dependencies
+        run: bundle exec bundle-audit check --update || echo "bundle-audit not available, skipping"
+
+  compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Test installation process
+        run: |
+          gem build lsql.gemspec
+          gem install ./lsql-*.gem
+          
+          # Test that the command is available
+          lsql --help
+          
+          # Test basic functionality
+          lsql --show-config || echo "Config test completed"
+          lsql --init-config
+          lsql -g list

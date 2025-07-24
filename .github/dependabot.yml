@@ -1,0 +1,33 @@
+version: 2
+updates:
+  # Enable version updates for Ruby (Bundler)
+  - package-ecosystem: "bundler"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "egrif"
+    assignees:
+      - "egrif"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday" 
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "egrif"
+    assignees:
+      - "egrif"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
