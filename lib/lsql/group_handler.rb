@@ -261,22 +261,14 @@ module Lsql
     private
 
     def pre_authenticate_lotus_sso(first_env)
-      # Make a dummy lotus call to establish SSO session before parallel execution
+      # Make a simple lotus ping to establish SSO session before parallel execution
       # This prevents multiple SSO authentication prompts when running in parallel
       return unless first_env
 
       puts 'Establishing SSO session...' if @options.verbose
 
-      # Create temporary options for the first environment to trigger SSO authentication
-      temp_options = @options.dup
-      temp_options.env = first_env
-
-      # Setup environment manager (this doesn't trigger lotus calls)
-      EnvironmentManager.new(temp_options)
-
-      # Make a single lotus call to establish SSO session
-      # We'll use the same lotus command that DatabaseConnector uses
-      cmd = "lotus secret get DATABASE_MAIN_URL -s \"#{temp_options.space}\" -e \"#{temp_options.env}\" -r \"#{temp_options.region}\" -a \"#{temp_options.application}\""
+      # Use lotus ping command which doesn't require any arguments
+      cmd = 'lotus ping'
 
       _, stderr, status = Open3.capture3(cmd)
 

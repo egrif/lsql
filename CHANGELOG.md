@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **SSO Pre-authentication**: Automatic Lotus SSO session establishment before parallel execution
-  - Prevents multiple SSO authentication prompts during parallel group operations
-  - Uses first environment to establish session that works for all parallel threads
+  - Uses simple `lotus ping` command to prevent multiple SSO authentication prompts during parallel group operations
+  - Establishes session that works for all parallel threads without requiring environment-specific arguments
   - Includes graceful error handling and informative messaging
 
 ### Fixed

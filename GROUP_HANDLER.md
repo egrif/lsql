@@ -116,10 +116,11 @@ LSQL supports parallel execution for group operations using the `-p` or `--paral
 
 When using parallel execution with Lotus environments, LSQL automatically:
 
-1. **Pre-authenticates** with Lotus SSO using the first environment before starting parallel jobs
-2. **Establishes session** that is shared across all parallel threads
+1. **Pre-authenticates** with Lotus SSO using `lotus ping` before starting parallel jobs
+2. **Establishes session** that is shared across all parallel threads  
 3. **Prevents multiple SSO prompts** that would otherwise interrupt each parallel job
-4. **Gracefully handles** authentication failures with informative warnings
+4. **Uses simple ping command** that requires no environment-specific arguments
+5. **Gracefully handles** authentication failures with informative warnings
 
 ### Parallel Examples
 
