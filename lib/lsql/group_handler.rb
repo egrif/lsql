@@ -3,6 +3,7 @@
 require 'yaml'
 require 'pathname'
 require 'concurrent-ruby'
+require 'open3'
 require_relative 'config_manager'
 
 module Lsql
@@ -52,6 +53,8 @@ module Lsql
 
       # Execute environments (parallel or sequential)
       results = if @options.parallel
+                  # Pre-authenticate with Lotus SSO before parallel execution to avoid multiple SSO prompts
+                  pre_authenticate_lotus_sso(environments.first) if environments.any?
                   execute_environments_parallel(environments, aggregator)
                 else
                   execute_environments_sequential(environments, aggregator)
@@ -256,6 +259,37 @@ module Lsql
     end
 
     private
+
+    def pre_authenticate_lotus_sso(first_env)
+      # Make a dummy lotus call to establish SSO session before parallel execution
+      # This prevents multiple SSO authentication prompts when running in parallel
+      return unless first_env
+
+      puts 'Establishing SSO session...' if @options.verbose
+
+      # Create temporary options for the first environment to trigger SSO authentication
+      temp_options = @options.dup
+      temp_options.env = first_env
+
+      # Setup environment manager (this doesn't trigger lotus calls)
+      EnvironmentManager.new(temp_options)
+
+      # Make a single lotus call to establish SSO session
+      # We'll use the same lotus command that DatabaseConnector uses
+      cmd = "lotus secret get DATABASE_MAIN_URL -s \"#{temp_options.space}\" -e \"#{temp_options.env}\" -r \"#{temp_options.region}\" -a \"#{temp_options.application}\""
+
+      _, stderr, status = Open3.capture3(cmd)
+
+      if status.success?
+        puts 'SSO session established successfully.' if @options.verbose
+      else
+        puts "Warning: Failed to establish SSO session: #{stderr}" if @options.verbose
+        puts 'Proceeding with parallel execution - you may see multiple SSO prompts.'
+      end
+    rescue StandardError => e
+      puts "Warning: Error during SSO pre-authentication: #{e.message}" if @options.verbose
+      puts 'Proceeding with parallel execution - you may see multiple SSO prompts.'
+    end
 
     def execute_for_environment(env_options, aggregator = nil)
       # Setup environment

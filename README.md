@@ -216,6 +216,7 @@ LSQL supports concurrent execution across multiple environments:
 - **Progress Tracking**: Real-time progress with spinners and counters
 - **Error Isolation**: Individual environment failures don't stop other executions
 - **Performance**: Dramatically faster execution for large environment groups
+- **SSO Optimization**: Automatically establishes SSO session before parallel execution to prevent multiple authentication prompts
 
 ### Parallel Execution Examples
 ```bash

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2025-07-24
+
+### Added
+- **SSO Pre-authentication**: Automatic Lotus SSO session establishment before parallel execution
+  - Prevents multiple SSO authentication prompts during parallel group operations
+  - Uses first environment to establish session that works for all parallel threads
+  - Includes graceful error handling and informative messaging
+
+### Fixed
+- **Column Alignment**: Improved table formatting in aggregated group output
+  - Changed "environment" header to "env" for better space usage
+  - Fixed column width calculation to ensure proper alignment
+  - Better separator line detection and formatting
+
 ## [1.2.0] - 2025-07-24
 
 ### Added

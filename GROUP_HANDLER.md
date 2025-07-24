@@ -102,6 +102,40 @@ COUNT=$(lsql "SELECT count(*) FROM users" -g staging -q)
 echo "Total users across staging: $COUNT"
 ```
 
+## Parallel Execution
+
+LSQL supports parallel execution for group operations using the `-p` or `--parallel` option:
+
+- **Auto CPU Detection**: Use `-p` to automatically use all available CPU cores
+- **Custom Thread Count**: Use `-p 4` to specify exact number of threads
+- **SSO Optimization**: Automatically establishes Lotus SSO session before parallel execution to prevent multiple authentication prompts
+- **Progress Tracking**: Real-time progress indicators show completion status
+- **Error Isolation**: Individual environment failures don't stop other executions
+
+### SSO Authentication
+
+When using parallel execution with Lotus environments, LSQL automatically:
+
+1. **Pre-authenticates** with Lotus SSO using the first environment before starting parallel jobs
+2. **Establishes session** that is shared across all parallel threads
+3. **Prevents multiple SSO prompts** that would otherwise interrupt each parallel job
+4. **Gracefully handles** authentication failures with informative warnings
+
+### Parallel Examples
+
+```bash
+# Auto-detect CPU cores with SSO pre-authentication
+lsql "SELECT count(*) FROM users" -g staging -p
+
+# Use 4 threads with verbose output
+lsql "SELECT version()" -g production -p 4 -v
+
+# Parallel execution with clean output for automation
+lsql "SELECT current_timestamp" -g staging -p -q
+```
+
+**Note**: The first time you run a parallel group operation in a session, you'll see "Establishing SSO session..." in verbose mode as LSQL authenticates once for all subsequent parallel jobs.
+
 ## Configuration File
 
 Groups are defined in a YAML configuration file named `.lsql_groups.yml`. The tool will search for this file starting from the current directory and moving up the directory tree until it finds one or reaches the root.
