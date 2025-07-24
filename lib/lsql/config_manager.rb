@@ -3,12 +3,47 @@ require 'fileutils'
 
 module LSQL
   class ConfigManager
-    CONFIG_FILE = File.expand_path('~/.lsql_config.yml')
+    CONFIG_DIR = File.expand_path('~/.lsql')
+    CONFIG_FILE = File.join(CONFIG_DIR, 'config.yml')
     
     DEFAULT_CONFIG = {
       'cache' => {
         'prefix' => 'db_url',
         'ttl_minutes' => 10
+      },
+      'groups' => {
+        'staging' => {
+          'description' => 'Staging environments',
+          'environments' => ['staging', 'staging-s2', 'staging-s3', 'staging-s101', 'staging-s201']
+        },
+        'all-prod' => {
+          'description' => 'All production environments',
+          'environments' => ['prod', 'prod-s2', 'prod-s3', 'prod-s4', 'prod-s5', 'prod-s6', 'prod-s7', 'prod-s8', 'prod-s9', 'prod-s101', 'prod-s201']
+        },
+        'us-prod' => {
+          'description' => 'All US production environments',
+          'environments' => ['prod', 'prod-s2', 'prod-s3', 'prod-s4', 'prod-s5', 'prod-s6', 'prod-s7', 'prod-s8', 'prod-s9']
+        },
+        'eu-prod' => {
+          'description' => 'All EU production environments',
+          'environments' => ['prod-s101']
+        },
+        'apse-prod' => {
+          'description' => 'All AP Southeast production environments',
+          'environments' => ['prod-s201']
+        },
+        'us-staging' => {
+          'description' => 'All US staging environments',
+          'environments' => ['staging', 'staging-s2', 'staging-s3']
+        },
+        'eu-staging' => {
+          'description' => 'All EU staging environments',
+          'environments' => ['staging-s101']
+        },
+        'apse-staging' => {
+          'description' => 'All AP Southeast staging environments',
+          'environments' => ['staging-s201']
+        }
       }
     }.freeze
 
@@ -47,11 +82,11 @@ module LSQL
     def self.create_default_config
       return if File.exist?(CONFIG_FILE)
       
-      FileUtils.mkdir_p(File.dirname(CONFIG_FILE))
+      FileUtils.mkdir_p(CONFIG_DIR)
       
       config_content = <<~YAML
         # LSQL Configuration File
-        # This file contains default settings for the LSQL command-line tool
+        # This file contains settings and group definitions for the LSQL command-line tool
         
         cache:
           # Cache key prefix (default: db_url)
@@ -62,10 +97,83 @@ module LSQL
           # How long database URLs are cached before requiring fresh lookup
           ttl_minutes: 10
         
+        # Environment groups for batch operations
+        groups:
+          staging:
+            description: Staging environments
+            environments:
+              - staging
+              - staging-s2
+              - staging-s3
+              - staging-s101
+              - staging-s201
+          
+          all-prod:
+            description: All production environments
+            environments:
+              - prod
+              - prod-s2
+              - prod-s3
+              - prod-s4
+              - prod-s5
+              - prod-s6
+              - prod-s7
+              - prod-s8
+              - prod-s9
+              - prod-s101
+              - prod-s201
+          
+          us-prod:
+            description: All US production environments
+            environments:
+              - prod
+              - prod-s2
+              - prod-s3
+              - prod-s4
+              - prod-s5
+              - prod-s6
+              - prod-s7
+              - prod-s8
+              - prod-s9
+          
+          eu-prod:
+            description: All EU production environments
+            environments:
+              - prod-s101
+          
+          apse-prod:
+            description: All AP Southeast production environments
+            environments:
+              - prod-s201
+          
+          us-staging:
+            description: All US staging environments
+            environments:
+              - staging
+              - staging-s2
+              - staging-s3
+          
+          eu-staging:
+            description: All EU staging environments
+            environments:
+              - staging-s101
+          
+          apse-staging:
+            description: All AP Southeast staging environments
+            environments:
+              - staging-s201
+        
         # Example custom configuration:
         # cache:
         #   prefix: myteam_db_urls
         #   ttl_minutes: 30
+        # 
+        # groups:
+        #   my-custom-group:
+        #     description: My custom environments
+        #     environments:
+        #       - env1
+        #       - env2
       YAML
       
       File.write(CONFIG_FILE, config_content)
@@ -124,6 +232,32 @@ module LSQL
 
     def self.config_file_path
       CONFIG_FILE
+    end
+
+    def self.get_groups
+      config = load_config
+      config['groups'] || DEFAULT_CONFIG['groups']
+    end
+
+    def self.get_group_environments(group_name)
+      groups = get_groups
+      return [] unless groups&.dig(group_name)
+      
+      group_config = groups[group_name]
+      group_config['environments'] || []
+    end
+
+    def self.group_exists?(group_name)
+      groups = get_groups
+      groups&.key?(group_name) || false
+    end
+
+    def self.list_available_groups
+      groups = get_groups
+      groups.each do |name, group_config|
+        environments = group_config['environments'] || []
+        puts "  - #{name} (#{environments.length} environments)"
+      end
     end
   end
 end

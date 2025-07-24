@@ -160,10 +160,15 @@ module Lsql
         opts.separator "  #{File.basename($PROGRAM_NAME)} --init-config                 # Create default configuration file"
         opts.separator ''
         opts.separator 'Configuration:'
-        opts.separator '  Settings priority: CLI arguments > ~/.lsql_config.yml > environment variables > defaults'
-        opts.separator '  Configuration file example (~/.lsql_config.yml):'
-        opts.separator '    cache_prefix: "myteam"'
-        opts.separator '    cache_ttl_minutes: 15'
+        opts.separator '  Settings priority: CLI arguments > ~/.lsql/config.yml > environment variables > defaults'
+        opts.separator '  Configuration file example (~/.lsql/config.yml):'
+        opts.separator '    cache:'
+        opts.separator '      prefix: "myteam"'
+        opts.separator '      ttl_minutes: 15'
+        opts.separator '    groups:'
+        opts.separator '      my-envs:'
+        opts.separator '        description: "My custom environments"'
+        opts.separator '        environments: ["env1", "env2"]'
         opts.separator '  Environment variables: LSQL_CACHE_PREFIX, LSQL_CACHE_TTL'
       end
 

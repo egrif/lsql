@@ -3,15 +3,13 @@
 require 'yaml'
 require 'pathname'
 require 'concurrent-ruby'
+require_relative 'config_manager'
 
 module Lsql
   # Handles group-based operations across multiple environments
   class GroupHandler
-    CONFIG_FILE_NAME = '.lsql_groups.yml'
-    
     def initialize(options)
       @options = options
-      @config_path = find_config_file
     end
 
     def execute_for_group
@@ -30,13 +28,13 @@ module Lsql
         exit 1
       end
 
-      config = load_config
-      environments = get_group_environments(config, @options.group)
+      config = LSQL::ConfigManager.load_config
+      environments = LSQL::ConfigManager.get_group_environments(@options.group)
       
       if environments.empty?
         puts "Error: Group '#{@options.group}' not found or has no environments."
         puts "Available groups:"
-        list_available_groups(config)
+        LSQL::ConfigManager.list_available_groups
         exit 1
       end
 
@@ -247,15 +245,15 @@ module Lsql
     end
 
     def list_groups
-      config = load_config
-      groups = config['groups'] || {}
+      groups = LSQL::ConfigManager.get_groups
       
       if groups.empty?
-        puts "No groups found in configuration file: #{@config_path}"
+        puts "No groups found in configuration file: #{LSQL::ConfigManager.config_file_path}"
+        puts "Run 'lsql --init-config' to create a default configuration with sample groups."
         return
       end
 
-      puts "Available groups in #{@config_path}:"
+      puts "Available groups in #{LSQL::ConfigManager.config_file_path}:"
       puts "=" * 50
       groups.each do |name, group_config|
         description = group_config['description'] || 'No description'
@@ -268,88 +266,6 @@ module Lsql
     end
 
     private
-
-    def find_config_file
-      # Look for config file starting from current directory and going up
-      current_dir = Pathname.new(Dir.pwd)
-      
-      loop do
-        config_path = current_dir + CONFIG_FILE_NAME
-        return config_path.to_s if config_path.exist?
-        
-        parent = current_dir.parent
-        break if parent == current_dir # reached root
-        current_dir = parent
-      end
-
-      # If not found, use current directory
-      File.join(Dir.pwd, CONFIG_FILE_NAME)
-    end
-
-    def load_config
-      unless File.exist?(@config_path)
-        create_sample_config
-        puts "Error: Group configuration file not found."
-        puts "A sample configuration has been created at: #{@config_path}"
-        puts "Please edit it to define your environment groups."
-        exit 1
-      end
-
-      begin
-        YAML.load_file(@config_path)
-      rescue => e
-        puts "Error loading configuration file #{@config_path}: #{e.message}"
-        exit 1
-      end
-    end
-
-    def create_sample_config
-      sample_config = {
-        'groups' => {
-          'staging' => {
-            'description' => 'Staging environments',
-            'environments' => ['staging', 'staging-s2', 'staging-s3', 'staging-s101', 'staging-s201']
-          },
-          'all-prod' => {
-            'description' => 'All production environments',
-            'environments' => ['prod', 'prod-s2', 'prod-s3', 'prod-s4', 'prod-s5', 'prod-s6', 'prod-s7', 'prod-s8', 'prod-s9', 'prod-s101', 'prod-s201']
-          },
-          'us-prod' => {
-            'description' => 'All US production environments',
-            'environments' => ['prod', 'prod-s2', 'prod-s3', 'prod-s4', 'prod-s5', 'prod-s6', 'prod-s7', 'prod-s8', 'prod-s9']
-          },
-          'eu-prod' => {
-            'description' => 'All EU production environments',
-            'environments' => ['prod-s101']
-          },
-          'apse-prod' => {
-            'description' => 'All AP Southeast production environments',
-            'environments' => ['prod-s201']
-          },
-          'us-staging' => {
-            'description' => 'All US staging environments',
-            'environments' => ['staging', 'staging-s2', 'staging-s3']
-          },
-          'eu-staging' => {
-            'description' => 'All EU staging environments',
-            'environments' => ['staging-s101']
-          },
-          'apse-staging' => {
-            'description' => 'All AP Southeast staging environments',
-            'environments' => ['staging-s201']
-          }
-        }
-      }
-
-      File.write(@config_path, sample_config.to_yaml)
-    end
-
-    def get_group_environments(config, group_name)
-      return [] unless config&.dig('groups', group_name)
-      
-      group_config = config['groups'][group_name]
-      group_config['environments'] || []
-    end
 
     def execute_for_environment(env_options, aggregator = nil)
       # Setup environment
@@ -411,14 +327,6 @@ module Lsql
       end
       
       puts "\nTotal environments processed: #{results.length}"
-    end
-
-    def list_available_groups(config)
-      groups = config['groups'] || {}
-      groups.each do |name, group_config|
-        environments = group_config['environments'] || []
-        puts "  - #{name} (#{environments.length} environments)"
-      end
     end
   end
 end

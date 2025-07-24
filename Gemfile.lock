@@ -1,3 +1,12 @@
+PATH
+  remote: .
+  specs:
+    lsql (1.0.0)
+      concurrent-ruby (~> 1.2)
+      moneta (~> 1.0)
+      optparse (~> 0.4.0)
+      redis (~> 5.0)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -59,10 +68,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  concurrent-ruby (~> 1.2)
-  moneta (~> 1.0)
-  optparse (~> 0.4.0)
-  redis (~> 5.0)
+  lsql!
   rspec (~> 3.12)
   rubocop (~> 1.50)
 
