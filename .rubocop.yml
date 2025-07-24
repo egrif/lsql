@@ -1,9 +1,10 @@
 AllCops:
-  TargetRubyVersion: 2.7
+  TargetRubyVersion: 3.0
   NewCops: enable
+  SuggestExtensions: false
 
 Layout/LineLength:
-  Max: 120
+  Max: 140
 
 Style/Documentation:
   Enabled: false
@@ -11,17 +12,55 @@ Style/Documentation:
 Style/FrozenStringLiteralComment:
   Enabled: true
 
+# Increase limits for CLI tool complexity
 Metrics/ClassLength:
-  Max: 150
+  Max: 250
 
 Metrics/MethodLength:
-  Max: 30
+  Max: 50
 
 Metrics/AbcSize:
-  Max: 20
+  Max: 30
 
 Metrics/CyclomaticComplexity:
-  Max: 8
+  Max: 15
 
 Metrics/PerceivedComplexity:
-  Max: 8
+  Max: 15
+
+Metrics/BlockLength:
+  Max: 30
+  Exclude:
+    - 'spec/**/*'
+
+# Allow OpenStruct for CLI options
+Style/OpenStructUse:
+  Exclude:
+    - 'lib/lsql/command_line_parser.rb'
+
+# Allow predicate methods that don't end with ?
+Naming/PredicateMethod:
+  Enabled: false
+
+# Allow get_ prefixed methods
+Naming/AccessorMethodName:
+  Enabled: false
+
+# Development dependencies are fine in gemspec for now
+Gemspec/DevelopmentDependencies:
+  Enabled: false
+
+# Allow duplicate branches in conditional logic
+Lint/DuplicateBranch:
+  Enabled: false
+
+# Disable some naming conventions that are less important
+Naming/PredicatePrefix:
+  Enabled: false
+
+# Allow some complexity in output aggregation logic
+Lint/EmptyConditionalBody:
+  Enabled: false
+
+Style/EmptyElse:
+  Enabled: false

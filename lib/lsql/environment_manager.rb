@@ -14,11 +14,12 @@ module Lsql
 
       # Set the REGION based on the ending digits of ENV if not already specified
       if @options.region.nil?
-        if @options.env =~ /[2][0-9][1-9]$/
+        case @options.env
+        when /[2][0-9][1-9]$/
           @options.region = 'apse2'
-        elsif @options.env =~ /[1][0-9][1-9]$/
+        when /[1][0-9][1-9]$/
           @options.region = 'euc1'
-        elsif @options.env =~ /[0-9][0-9]?$/
+        when /[0-9][0-9]?$/
           @options.region = 'use1'
         end
       end

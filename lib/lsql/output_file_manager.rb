@@ -16,7 +16,7 @@ module Lsql
 
     def temp_file?
       # Check if the output file is a temporary file (contains temp directory path and lsql_temp)
-      @options.output_file && @options.output_file.include?('lsql_temp')
+      @options.output_file&.include?('lsql_temp')
     end
 
     def setup_output_file
@@ -25,9 +25,7 @@ module Lsql
         iso_date = Date.today.strftime('%Y%m%d')
         serial_integer = 1
 
-        while File.exist?("#{DEFAULT_OUTPUT_DIR}/#{iso_date}_#{@options.env}_#{format('%04d', serial_integer)}")
-          serial_integer += 1
-        end
+        serial_integer += 1 while File.exist?("#{DEFAULT_OUTPUT_DIR}/#{iso_date}_#{@options.env}_#{format('%04d', serial_integer)}")
 
         @options.output_file = "#{DEFAULT_OUTPUT_DIR}/#{iso_date}_#{@options.env}_#{format('%04d', serial_integer)}"
       else
@@ -37,9 +35,7 @@ module Lsql
         extension = File.extname(@options.output_file).delete('.')
         extension = extension.empty? ? '' : ".#{extension}"
 
-        while File.exist?("#{base_output_file}_#{@options.env}_#{format('%04d', serial_integer)}#{extension}")
-          serial_integer += 1
-        end
+        serial_integer += 1 while File.exist?("#{base_output_file}_#{@options.env}_#{format('%04d', serial_integer)}#{extension}")
 
         @options.output_file = "#{base_output_file}_#{@options.env}_#{format('%04d', serial_integer)}#{extension}"
       end
@@ -54,7 +50,7 @@ module Lsql
 
     def append_sql_command_to_output_file(sql_command)
       return unless @options.output_file
-      
+
       # Only append SQL command comment in non-aggregated mode with real output files
       # Skip for temporary files used in aggregation
       return if temp_file?
@@ -68,7 +64,7 @@ module Lsql
 
     def append_sql_file_to_output_file(sql_file)
       return unless @options.output_file
-      
+
       # Only append SQL file comment in non-aggregated mode with real output files
       # Skip for temporary files used in aggregation
       return if temp_file?

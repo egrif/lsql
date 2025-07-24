@@ -26,7 +26,7 @@ module Lsql
 
       # Handle configuration operations
       if options.show_config
-        cli_ttl = options.cache_ttl && options.cache_ttl * 60  # Convert to seconds for consistency
+        cli_ttl = options.cache_ttl && (options.cache_ttl * 60) # Convert to seconds for consistency
         puts LSQL::ConfigManager.show_config(options.cache_prefix, cli_ttl)
         return
       end
@@ -34,7 +34,7 @@ module Lsql
       if options.init_config
         LSQL::ConfigManager.create_default_config
         puts "Configuration file created at #{LSQL::ConfigManager::CONFIG_FILE}"
-        puts "Edit this file to customize your cache settings."
+        puts 'Edit this file to customize your cache settings.'
         return
       end
 
@@ -42,13 +42,13 @@ module Lsql
       if options.clear_cache
         # Use proper configuration resolution for cache parameters
         cache_ttl = if options.cache_ttl
-                      options.cache_ttl * 60  # Convert minutes to seconds
+                      options.cache_ttl * 60 # Convert minutes to seconds
                     elsif ENV['LSQL_CACHE_TTL']
                       ENV['LSQL_CACHE_TTL'].to_i * 60
                     else
                       LSQL::ConfigManager.get_cache_ttl
                     end
-        
+
         cache = LSQL::CacheManager.instance(options.cache_prefix, cache_ttl)
         cache.clear_cache
         puts 'Database URL cache cleared successfully'
@@ -59,20 +59,20 @@ module Lsql
       if options.cache_stats
         # Use proper configuration resolution for cache parameters
         cache_ttl = if options.cache_ttl
-                      options.cache_ttl * 60  # Convert minutes to seconds
+                      options.cache_ttl * 60 # Convert minutes to seconds
                     elsif ENV['LSQL_CACHE_TTL']
                       ENV['LSQL_CACHE_TTL'].to_i * 60
                     else
                       LSQL::ConfigManager.get_cache_ttl
                     end
-        
+
         cache = LSQL::CacheManager.instance(options.cache_prefix, cache_ttl)
         stats = cache.cache_stats
-        puts "Cache Statistics:"
+        puts 'Cache Statistics:'
         puts "  Backend: #{stats[:backend]}"
         puts "  Prefix: #{stats[:prefix]}"
         puts "  Total entries: #{stats[:total_entries]}"
-        puts "  TTL: #{stats[:ttl_seconds]} seconds (#{stats[:ttl_seconds]/60} minutes)"
+        puts "  TTL: #{stats[:ttl_seconds]} seconds (#{stats[:ttl_seconds] / 60} minutes)"
         puts "  Location: #{stats[:backend] == 'Redis' ? ENV['REDIS_URL'] || 'redis://localhost:6379' : LSQL::CacheManager::CACHE_DIR}"
         return
       end

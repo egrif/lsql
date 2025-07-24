@@ -61,7 +61,7 @@ module Lsql
         opts.on('-p', '--parallel [THREADS]', Integer, 'Enable parallel execution for group operations',
                 '  Specify number of concurrent threads (default: number of CPU cores)',
                 '  Use with caution - high concurrency may impact database performance') do |threads|
-          @options.parallel = threads || 0  # 0 means auto-detect CPU cores
+          @options.parallel = threads || 0 # 0 means auto-detect CPU cores
         end
 
         opts.on('-v', '--verbose', 'Enable verbose output for group operations',

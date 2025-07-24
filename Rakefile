@@ -18,7 +18,7 @@ task :install do
 
   # Create symlink to make it globally available
   home_bin = File.expand_path('~/bin')
-  Dir.mkdir(home_bin) unless Dir.exist?(home_bin)
+  FileUtils.mkdir_p(home_bin)
 
   source = File.expand_path('bin/lsql')
   target = File.join(home_bin, 'lsql')

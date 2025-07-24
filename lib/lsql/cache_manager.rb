@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'moneta'
 require 'fileutils'
 require 'cgi'
@@ -11,7 +13,7 @@ module LSQL
     def initialize(cache_prefix = nil, ttl_seconds = nil)
       @cache_prefix = cache_prefix || ENV['LSQL_CACHE_PREFIX'] || DEFAULT_CACHE_PREFIX
       @ttl = ttl_seconds || DEFAULT_TTL
-      @redis_enabled = !!ENV['REDIS_URL']
+      @redis_enabled = !ENV['REDIS_URL'].nil?
       @store = if @redis_enabled
                  create_redis_store
                else
@@ -23,24 +25,24 @@ module LSQL
 
     def create_redis_store
       require 'redis'
-      puts "Using Redis cache at #{ENV['REDIS_URL']}" if ENV['LSQL_VERBOSE']
-      
+      puts "Using Redis cache at #{ENV.fetch('REDIS_URL', nil)}" if ENV['LSQL_VERBOSE']
+
       # Parse Redis URL
-      uri = URI.parse(ENV['REDIS_URL'])
+      uri = URI.parse(ENV.fetch('REDIS_URL', nil))
       redis_options = {
         host: uri.host,
         port: uri.port || 6379
       }
       redis_options[:password] = uri.password if uri.password
-      
+
       store = Moneta.new(:Redis, redis_options.merge(expires: true))
       @redis_connection_successful = true
       store
     rescue LoadError
-      puts "Warning: Redis gem not available, falling back to file cache"
+      puts 'Warning: Redis gem not available, falling back to file cache'
       @redis_connection_successful = false
       create_file_store
-    rescue => e
+    rescue StandardError => e
       puts "Warning: Failed to connect to Redis (#{e.message}), falling back to file cache"
       @redis_connection_successful = false
       create_file_store
@@ -48,43 +50,47 @@ module LSQL
 
     def create_file_store
       # Ensure cache directory exists
-      FileUtils.mkdir_p(CACHE_DIR) unless Dir.exist?(CACHE_DIR)
-      
+      FileUtils.mkdir_p(CACHE_DIR)
+
       puts "Using file cache at #{CACHE_DIR}" if ENV['LSQL_VERBOSE']
-      
+
       @redis_connection_successful = false
-      
+
       # Use file-based store with expiration support
-      store = Moneta.new(:File, 
-                         dir: CACHE_DIR, 
-                         expires: true, 
+      store = Moneta.new(:File,
+                         dir: CACHE_DIR,
+                         expires: true,
                          default_expires: @ttl)
-      
+
       # Clean up expired entries on initialization
       cleanup_expired_entries(store)
-      
+
       store
     end
 
     def cleanup_expired_entries(store)
       return unless store.is_a?(Moneta::Adapters::File)
-      
+
       # Get all keys and check each one for expiration
       # This forces Moneta to check TTL and remove expired entries
       begin
         Dir.glob(File.join(CACHE_DIR, '*')).each do |file|
           next unless File.file?(file)
-          
+
           # Extract key from filename (Moneta URL-encodes keys)
           key = File.basename(file)
-          key = CGI.unescape(key) rescue key
-          
+          key = begin
+            CGI.unescape(key)
+          rescue StandardError
+            key
+          end
+
           # Accessing the key will trigger TTL check and cleanup
           store.key?(key)
         end
-        
-        puts "Cleaned up expired cache entries" if ENV['LSQL_VERBOSE']
-      rescue => e
+
+        puts 'Cleaned up expired cache entries' if ENV['LSQL_VERBOSE']
+      rescue StandardError => e
         puts "Warning: Failed to cleanup expired entries: #{e.message}" if ENV['LSQL_VERBOSE']
       end
     end
@@ -97,11 +103,10 @@ module LSQL
 
     def set(key, value)
       if redis_store?
-        @store.store(key, value, expires: @ttl)
       else
         # For file store, use explicit expiration to ensure TTL works
-        @store.store(key, value, expires: @ttl)
       end
+      @store.store(key, value, expires: @ttl)
     end
 
     def cached?(key)
@@ -165,15 +170,15 @@ module LSQL
         # For Redis, count keys with our prefix pattern
         redis_keys = `redis-cli keys "lsql:#{@cache_prefix}:*" 2>/dev/null`.split("\n").reject(&:empty?)
         total_keys = redis_keys.length
-        backend = "Redis"
+        backend = 'Redis'
       else
         # For file store, count files in cache directory
         pattern = File.join(CACHE_DIR, "lsql%3A#{@cache_prefix}%3A*")
         files = Dir.glob(pattern)
         total_keys = files.length
-        backend = "File"
+        backend = 'File'
       end
-      
+
       {
         backend: backend,
         prefix: @cache_prefix,
@@ -184,15 +189,15 @@ module LSQL
 
     def self.instance(cache_prefix = nil, ttl_seconds = nil)
       # Use ConfigManager to resolve values with proper priority
-      effective_prefix = LSQL::ConfigManager.get_cache_prefix(cache_prefix, ENV['LSQL_CACHE_PREFIX'])
+      effective_prefix = LSQL::ConfigManager.get_cache_prefix(cache_prefix, ENV.fetch('LSQL_CACHE_PREFIX', nil))
       effective_ttl = if ttl_seconds
                         ttl_seconds
                       elsif ENV['LSQL_CACHE_TTL']
-                        ENV['LSQL_CACHE_TTL'].to_i * 60  # Convert minutes to seconds
+                        ENV['LSQL_CACHE_TTL'].to_i * 60 # Convert minutes to seconds
                       else
                         LSQL::ConfigManager.get_cache_ttl
                       end
-      
+
       cache_key = "#{effective_prefix}_#{effective_ttl}"
       @instances ||= {}
       @instances[cache_key] ||= new(effective_prefix, effective_ttl)

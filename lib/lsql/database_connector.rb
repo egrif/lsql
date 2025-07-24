@@ -11,10 +11,10 @@ module Lsql
     def initialize(options)
       @options = options
       @mode_display = ''
-      
+
       # Calculate TTL in seconds if provided in minutes
-      cache_ttl = @options.cache_ttl && @options.cache_ttl * 60  # Convert minutes to seconds if provided
-      
+      cache_ttl = @options.cache_ttl && (@options.cache_ttl * 60) # Convert minutes to seconds if provided
+
       @cache = LSQL::CacheManager.instance(@options.cache_prefix, cache_ttl)
     end
 
@@ -22,8 +22,11 @@ module Lsql
       # Check if URL is cached using all lotus parameters for uniqueness
       cached_url = nil
       if @cache.url_cached_for_params?(@options.space, @options.env, @options.region, @options.application)
-        puts "Using cached database URL for #{@options.env} (space: #{@options.space}, region: #{@options.region}, app: #{@options.application})" if @options.verbose
-        cached_url = @cache.get_cached_url_for_params(@options.space, @options.env, @options.region, @options.application)
+        if @options.verbose
+          puts "Using cached database URL for #{@options.env} (space: #{@options.space}, region: #{@options.region}, app: #{@options.application})"
+        end
+        cached_url = @cache.get_cached_url_for_params(@options.space, @options.env, @options.region,
+                                                      @options.application)
       else
         # Always get the main database URL - never use any other secret name
         cmd = "lotus secret get DATABASE_MAIN_URL -s \"#{@options.space}\" -e \"#{@options.env}\" -r \"#{@options.region}\" -a \"#{@options.application}\""
@@ -39,7 +42,9 @@ module Lsql
 
           # Cache the original URL with all parameters for uniqueness
           @cache.cache_url_for_params(@options.space, @options.env, @options.region, @options.application, cached_url)
-          puts "Cached database URL for #{@options.env} (space: #{@options.space}, region: #{@options.region}, app: #{@options.application}) - TTL: #{@cache.cache_stats[:ttl_seconds] / 60} minutes" if @options.verbose
+          if @options.verbose
+            puts "Cached database URL for #{@options.env} (space: #{@options.space}, region: #{@options.region}, app: #{@options.application}) - TTL: #{@cache.cache_stats[:ttl_seconds] / 60} minutes"
+          end
         else
           puts "Failed to retrieve DATABASE_MAIN_URL: #{stderr}"
           exit 1
