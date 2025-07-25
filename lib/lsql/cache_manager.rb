@@ -125,8 +125,10 @@ module LSQL
       cipher.encrypt
       cipher.key = encryption_key
 
-      # Generate random IV for each encryption
+      # Generate random 12-byte IV for GCM mode
       iv = cipher.random_iv
+      # For GCM mode, we need to ensure we use exactly 12 bytes
+      iv = iv[0, 12] if iv.length > 12
       cipher.iv = iv
 
       # Encrypt the value
@@ -150,10 +152,10 @@ module LSQL
       # Decode from base64
       combined = Base64.strict_decode64(encrypted_value)
 
-      # Extract IV (16 bytes), auth_tag (16 bytes), and encrypted data
-      iv = combined[0, 16]
-      auth_tag = combined[16, 16]
-      encrypted = combined[32..]
+      # Extract IV (12 bytes), auth_tag (16 bytes), and encrypted data
+      iv = combined[0, 12]
+      auth_tag = combined[12, 16]
+      encrypted = combined[28..]
 
       # Decrypt
       decipher = OpenSSL::Cipher.new('AES-256-GCM')
