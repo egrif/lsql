@@ -17,11 +17,11 @@ module LSQL
     def initialize(cache_prefix = nil, ttl_seconds = nil)
       @cache_prefix = cache_prefix || ENV['LSQL_CACHE_PREFIX'] || DEFAULT_CACHE_PREFIX
       @ttl = ttl_seconds || DEFAULT_TTL
-      @cache_dir = ConfigManager.get_cache_directory(nil, ENV['LSQL_CACHE_DIR'])
-      
+      @cache_dir = ConfigManager.get_cache_directory(nil, ENV.fetch('LSQL_CACHE_DIR', nil))
+
       # Migrate legacy cache if needed
       ConfigManager.migrate_legacy_cache
-      
+
       @redis_enabled = !ENV['REDIS_URL'].nil?
       @store = if @redis_enabled
                  create_redis_store

@@ -23,7 +23,7 @@ RSpec.describe LSQL::ConfigManager do
   end
 
   after do
-    FileUtils.rm_rf(test_config_dir) if Dir.exist?(test_config_dir)
+    FileUtils.rm_rf(test_config_dir)
     # Clean up environment variables
     ENV.delete('LSQL_CACHE_PREFIX')
     ENV.delete('LSQL_CACHE_TTL')
@@ -45,7 +45,7 @@ RSpec.describe LSQL::ConfigManager do
 
       it 'loads configuration from file' do
         config = described_class.load_config
-        
+
         expect(config['cache']['prefix']).to eq('test_prefix')
         expect(config['cache']['ttl_minutes']).to eq(20)
         expect(config['cache']['directory']).to eq('/custom/cache/dir')
@@ -89,7 +89,7 @@ RSpec.describe LSQL::ConfigManager do
       File.write(test_config_file, {
         'cache' => { 'prefix' => 'config_prefix' }
       }.to_yaml)
-      
+
       result = described_class.get_cache_prefix(nil, nil)
       expect(result).to eq('config_prefix')
     end
@@ -116,7 +116,7 @@ RSpec.describe LSQL::ConfigManager do
       File.write(test_config_file, {
         'cache' => { 'ttl_minutes' => 15 }
       }.to_yaml)
-      
+
       result = described_class.get_cache_ttl(nil, nil)
       expect(result).to eq(900) # 15 minutes * 60 seconds
     end
@@ -143,7 +143,7 @@ RSpec.describe LSQL::ConfigManager do
       File.write(test_config_file, {
         'cache' => { 'directory' => '/config/cache/dir' }
       }.to_yaml)
-      
+
       result = described_class.get_cache_directory(nil, nil)
       expect(result).to eq('/config/cache/dir')
     end
@@ -176,19 +176,19 @@ RSpec.describe LSQL::ConfigManager do
       end
 
       it 'migrates files from old to new location' do
-        skip "Migration testing requires complex mocking - tested in integration"
+        skip 'Migration testing requires complex mocking - tested in integration'
       end
 
       it 'removes old directory when empty after migration' do
-        skip "Migration testing requires complex mocking - tested in integration"
+        skip 'Migration testing requires complex mocking - tested in integration'
       end
 
       it 'does not overwrite existing files in new location' do
         FileUtils.mkdir_p(new_cache_dir)
         File.write(File.join(new_cache_dir, 'cache_file1'), 'existing_content')
-        
+
         described_class.migrate_legacy_cache
-        
+
         expect(File.read(File.join(new_cache_dir, 'cache_file1'))).to eq('existing_content')
         expect(File.exist?(File.join(old_cache_dir, 'cache_file1'))).to be true # Not moved
       end
@@ -216,7 +216,7 @@ RSpec.describe LSQL::ConfigManager do
   describe '.create_default_config' do
     it 'creates default config file when it does not exist' do
       described_class.create_default_config
-      
+
       expect(File.exist?(test_config_file)).to be true
       content = File.read(test_config_file)
       expect(content).to include('cache:')
@@ -228,22 +228,22 @@ RSpec.describe LSQL::ConfigManager do
     it 'does not overwrite existing config file' do
       FileUtils.mkdir_p(test_config_dir)
       File.write(test_config_file, 'existing content')
-      
+
       described_class.create_default_config
-      
+
       expect(File.read(test_config_file)).to eq('existing content')
     end
 
     it 'creates directory structure if needed' do
       described_class.create_default_config
-      
+
       expect(Dir.exist?(test_config_dir)).to be true
       expect(File.exist?(test_config_file)).to be true
     end
 
     it 'includes cache directory in default config' do
       described_class.create_default_config
-      
+
       content = File.read(test_config_file)
       expect(content).to include('directory:')
       expect(content).to include('Directory where encrypted cache files are stored')
@@ -255,7 +255,7 @@ RSpec.describe LSQL::ConfigManager do
       ENV['LSQL_CACHE_PREFIX'] = 'env_prefix'
       ENV['LSQL_CACHE_TTL'] = '20'
       ENV['LSQL_CACHE_DIR'] = '/env/cache'
-      
+
       FileUtils.mkdir_p(test_config_dir)
       File.write(test_config_file, {
         'cache' => {
@@ -267,20 +267,20 @@ RSpec.describe LSQL::ConfigManager do
     end
 
     it 'prioritizes explicit values over environment and config' do
-      prefix = described_class.get_cache_prefix('explicit_prefix', ENV['LSQL_CACHE_PREFIX'])
+      prefix = described_class.get_cache_prefix('explicit_prefix', ENV.fetch('LSQL_CACHE_PREFIX', nil))
       ttl = described_class.get_cache_ttl(1800, ENV['LSQL_CACHE_TTL'].to_i * 60)
-      directory = described_class.get_cache_directory('/explicit/cache', ENV['LSQL_CACHE_DIR'])
-      
+      directory = described_class.get_cache_directory('/explicit/cache', ENV.fetch('LSQL_CACHE_DIR', nil))
+
       expect(prefix).to eq('explicit_prefix')
       expect(ttl).to eq(1800)
       expect(directory).to eq('/explicit/cache')
     end
 
     it 'prioritizes environment values over config file' do
-      prefix = described_class.get_cache_prefix(nil, ENV['LSQL_CACHE_PREFIX'])
+      prefix = described_class.get_cache_prefix(nil, ENV.fetch('LSQL_CACHE_PREFIX', nil))
       ttl = described_class.get_cache_ttl(nil, ENV['LSQL_CACHE_TTL'].to_i * 60)
-      directory = described_class.get_cache_directory(nil, ENV['LSQL_CACHE_DIR'])
-      
+      directory = described_class.get_cache_directory(nil, ENV.fetch('LSQL_CACHE_DIR', nil))
+
       expect(prefix).to eq('env_prefix')
       expect(ttl).to eq(1200) # 20 minutes * 60
       expect(directory).to eq('/env/cache')
@@ -290,7 +290,7 @@ RSpec.describe LSQL::ConfigManager do
       prefix = described_class.get_cache_prefix(nil, nil)
       ttl = described_class.get_cache_ttl(nil, nil)
       directory = described_class.get_cache_directory(nil, nil)
-      
+
       expect(prefix).to eq('config_prefix')
       expect(ttl).to eq(1800) # 30 minutes * 60
       expect(directory).to eq('/config/cache')

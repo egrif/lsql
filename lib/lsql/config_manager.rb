@@ -111,7 +111,7 @@ module LSQL
 
         filename = File.basename(file)
         new_file_path = File.join(new_cache_dir, filename)
-        
+
         # Only move if file doesn't already exist in new location
         unless File.exist?(new_file_path)
           FileUtils.mv(file, new_file_path)
@@ -122,9 +122,9 @@ module LSQL
       # Remove old cache directory if empty
       begin
         Dir.rmdir(old_cache_dir) if Dir.empty?(old_cache_dir)
-        puts "Migration completed successfully."
+        puts 'Migration completed successfully.'
       rescue Errno::ENOTEMPTY
-        puts "Migration completed. Old cache directory retained (contains additional files)."
+        puts 'Migration completed. Old cache directory retained (contains additional files).'
       rescue StandardError => e
         puts "Migration completed with warnings: #{e.message}"
       end
