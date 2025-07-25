@@ -1,0 +1,1 @@
+postgresql://user:secret@host:5432/secure_db
