@@ -111,7 +111,7 @@ module Lsql
         end
 
         opts.on('--clear-cache', 'Clear the persistent database URL cache',
-                '  Cache backend: Redis (if REDIS_URL set) or local files (~/.lsql_cache)') do
+                '  Cache backend: Redis (if REDIS_URL set) or local files (~/.lsql/cache)') do
           @options.clear_cache = true
         end
 
@@ -175,7 +175,7 @@ module Lsql
         opts.separator '      my-envs:'
         opts.separator '        description: "My custom environments"'
         opts.separator '        environments: ["env1", "env2"]'
-        opts.separator '  Environment variables: LSQL_CACHE_PREFIX, LSQL_CACHE_TTL'
+        opts.separator '  Environment variables: LSQL_CACHE_PREFIX, LSQL_CACHE_TTL, LSQL_CACHE_DIR, LSQL_CACHE_KEY'
       end
 
       begin

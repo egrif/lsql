@@ -11,7 +11,8 @@ module LSQL
     DEFAULT_CONFIG = {
       'cache' => {
         'prefix' => 'db_url',
-        'ttl_minutes' => 10
+        'ttl_minutes' => 10,
+        'directory' => File.join(CONFIG_DIR, 'cache')
       },
       'groups' => {
         'staging' => {
@@ -83,6 +84,52 @@ module LSQL
       ttl_minutes * 60 # Convert to seconds
     end
 
+    def self.get_cache_directory(explicit_value = nil, env_value = nil)
+      # Priority: 1. Explicit parameter, 2. Environment variable, 3. Config file, 4. Default
+      return File.expand_path(explicit_value) if explicit_value
+      return File.expand_path(env_value) if env_value
+
+      config = load_config
+      cache_dir = config.dig('cache', 'directory') || DEFAULT_CONFIG['cache']['directory']
+      File.expand_path(cache_dir)
+    end
+
+    def self.migrate_legacy_cache
+      old_cache_dir = File.expand_path('~/.lsql_cache')
+      new_cache_dir = get_cache_directory
+
+      return unless Dir.exist?(old_cache_dir) && old_cache_dir != new_cache_dir
+
+      puts "Migrating cache from #{old_cache_dir} to #{new_cache_dir}..."
+
+      # Ensure new cache directory exists
+      FileUtils.mkdir_p(new_cache_dir)
+
+      # Move all files from old to new location
+      Dir.glob(File.join(old_cache_dir, '*')).each do |file|
+        next unless File.file?(file)
+
+        filename = File.basename(file)
+        new_file_path = File.join(new_cache_dir, filename)
+        
+        # Only move if file doesn't already exist in new location
+        unless File.exist?(new_file_path)
+          FileUtils.mv(file, new_file_path)
+          puts "  Moved #{filename}" if ENV['LSQL_VERBOSE']
+        end
+      end
+
+      # Remove old cache directory if empty
+      begin
+        Dir.rmdir(old_cache_dir) if Dir.empty?(old_cache_dir)
+        puts "Migration completed successfully."
+      rescue Errno::ENOTEMPTY
+        puts "Migration completed. Old cache directory retained (contains additional files)."
+      rescue StandardError => e
+        puts "Migration completed with warnings: #{e.message}"
+      end
+    end
+
     def self.create_default_config
       return if File.exist?(CONFIG_FILE)
 
@@ -100,6 +147,10 @@ module LSQL
           # Cache TTL in minutes (default: 10)
           # How long database URLs are cached before requiring fresh lookup
           ttl_minutes: 10
+        #{'  '}
+          # Cache directory for filesystem cache (default: ~/.lsql/cache)
+          # Directory where encrypted cache files are stored
+          directory: #{File.join(CONFIG_DIR, 'cache')}
 
         # Environment groups for batch operations
         groups:

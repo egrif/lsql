@@ -3,16 +3,25 @@
 require 'moneta'
 require 'fileutils'
 require 'cgi'
+require 'openssl'
+require 'base64'
+require 'digest'
+require_relative 'config_manager'
 
 module LSQL
   class CacheManager
     DEFAULT_TTL = 600 # 10 minutes in seconds (fallback)
-    CACHE_DIR = File.expand_path('~/.lsql_cache')
     DEFAULT_CACHE_PREFIX = 'db_url'
+    ENCRYPTION_ENV_VAR = 'LSQL_CACHE_KEY'
 
     def initialize(cache_prefix = nil, ttl_seconds = nil)
       @cache_prefix = cache_prefix || ENV['LSQL_CACHE_PREFIX'] || DEFAULT_CACHE_PREFIX
       @ttl = ttl_seconds || DEFAULT_TTL
+      @cache_dir = ConfigManager.get_cache_directory(nil, ENV['LSQL_CACHE_DIR'])
+      
+      # Migrate legacy cache if needed
+      ConfigManager.migrate_legacy_cache
+      
       @redis_enabled = !ENV['REDIS_URL'].nil?
       @store = if @redis_enabled
                  create_redis_store
@@ -50,15 +59,15 @@ module LSQL
 
     def create_file_store
       # Ensure cache directory exists
-      FileUtils.mkdir_p(CACHE_DIR)
+      FileUtils.mkdir_p(@cache_dir)
 
-      puts "Using file cache at #{CACHE_DIR}" if ENV['LSQL_VERBOSE']
+      puts "Using file cache at #{@cache_dir}" if ENV['LSQL_VERBOSE']
 
       @redis_connection_successful = false
 
       # Use file-based store with expiration support
       store = Moneta.new(:File,
-                         dir: CACHE_DIR,
+                         dir: @cache_dir,
                          expires: true,
                          default_expires: @ttl)
 
@@ -74,7 +83,7 @@ module LSQL
       # Get all keys and check each one for expiration
       # This forces Moneta to check TTL and remove expired entries
       begin
-        Dir.glob(File.join(CACHE_DIR, '*')).each do |file|
+        Dir.glob(File.join(@cache_dir, '*')).each do |file|
           next unless File.file?(file)
 
           # Extract key from filename (Moneta URL-encodes keys)
@@ -95,18 +104,87 @@ module LSQL
       end
     end
 
+    # Encryption methods for file storage security
+    def get_encryption_key
+      # Get encryption key from environment variable
+      key = ENV.fetch(ENCRYPTION_ENV_VAR, nil)
+      return nil unless key
+
+      # Ensure key is exactly 32 bytes for AES-256
+      # Hash the provided key to get a consistent 32-byte key
+      Digest::SHA256.digest(key)
+    end
+
+    def encrypt_value(value)
+      return value if redis_store? # No encryption needed for Redis
+
+      encryption_key = get_encryption_key
+      return value unless encryption_key # No encryption if no key provided
+
+      cipher = OpenSSL::Cipher.new('AES-256-GCM')
+      cipher.encrypt
+      cipher.key = encryption_key
+
+      # Generate random IV for each encryption
+      iv = cipher.random_iv
+      cipher.iv = iv
+
+      # Encrypt the value
+      encrypted = cipher.update(value) + cipher.final
+      auth_tag = cipher.auth_tag
+
+      # Combine IV + auth_tag + encrypted_data and encode as base64
+      combined = iv + auth_tag + encrypted
+      Base64.strict_encode64(combined)
+    rescue StandardError => e
+      puts "Warning: Encryption failed (#{e.message}), storing value unencrypted" if ENV['LSQL_VERBOSE']
+      value
+    end
+
+    def decrypt_value(encrypted_value)
+      return encrypted_value if redis_store? # No decryption needed for Redis
+
+      encryption_key = get_encryption_key
+      return encrypted_value unless encryption_key # No decryption if no key
+
+      # Decode from base64
+      combined = Base64.strict_decode64(encrypted_value)
+
+      # Extract IV (16 bytes), auth_tag (16 bytes), and encrypted data
+      iv = combined[0, 16]
+      auth_tag = combined[16, 16]
+      encrypted = combined[32..]
+
+      # Decrypt
+      decipher = OpenSSL::Cipher.new('AES-256-GCM')
+      decipher.decrypt
+      decipher.key = encryption_key
+      decipher.iv = iv
+      decipher.auth_tag = auth_tag
+
+      decipher.update(encrypted) + decipher.final
+    rescue StandardError => e
+      puts "Warning: Decryption failed (#{e.message}), returning encrypted value" if ENV['LSQL_VERBOSE']
+      encrypted_value
+    end
+
     public
 
     def get(key)
-      @store[key]
+      encrypted_value = @store[key]
+      return nil unless encrypted_value
+
+      decrypt_value(encrypted_value)
     end
 
     def set(key, value)
+      encrypted_value = encrypt_value(value)
+
       if redis_store?
       else
         # For file store, use explicit expiration to ensure TTL works
       end
-      @store.store(key, value, expires: @ttl)
+      @store.store(key, encrypted_value, expires: @ttl)
     end
 
     def cached?(key)
@@ -171,19 +249,25 @@ module LSQL
         redis_keys = `redis-cli keys "lsql:#{@cache_prefix}:*" 2>/dev/null`.split("\n").reject(&:empty?)
         total_keys = redis_keys.length
         backend = 'Redis'
+        encryption_status = 'Not needed (Redis)'
+        location = ENV['REDIS_URL'] || 'Redis'
       else
         # For file store, count files in cache directory
-        pattern = File.join(CACHE_DIR, "lsql%3A#{@cache_prefix}%3A*")
+        pattern = File.join(@cache_dir, "lsql%3A#{@cache_prefix}%3A*")
         files = Dir.glob(pattern)
         total_keys = files.length
         backend = 'File'
+        encryption_status = get_encryption_key ? 'Enabled' : 'Disabled (set LSQL_CACHE_KEY)'
+        location = @cache_dir
       end
 
       {
         backend: backend,
         prefix: @cache_prefix,
         total_entries: total_keys,
-        ttl_seconds: @ttl
+        ttl_seconds: @ttl,
+        encryption: encryption_status,
+        location: location
       }
     end
 

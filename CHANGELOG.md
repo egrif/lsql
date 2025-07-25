@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2025-01-01
+
+### Added
+- **Cache Encryption**: AES-256-GCM encryption for filesystem cache security
+  - Database URLs stored in filesystem cache are now encrypted when `LSQL_CACHE_KEY` environment variable is set
+  - Uses AES-256-GCM with unique initialization vector (IV) per cache entry for maximum security
+  - Encryption key is hashed with SHA-256 to ensure consistent 32-byte key length
+  - Graceful fallback to unencrypted cache when encryption key is not available
+  - Redis cache remains unencrypted (Redis handles its own security)
+  - Cache stats display shows encryption status: "Enabled" or "Disabled (set LSQL_CACHE_KEY)"
+
+- **Configurable Cache Directory**: Filesystem cache directory is now configurable
+  - Default location moved from `~/.lsql_cache` to `~/.lsql/cache` (co-located with config)
+  - Configurable via `cache.directory` in config file or `LSQL_CACHE_DIR` environment variable
+  - Automatic migration from legacy location with user notification
+  - Cache stats display shows actual cache directory location
+
+### Changed
+- **Cache Directory Location**: Default filesystem cache moved to `~/.lsql/cache`
+  - Provides better organization alongside configuration file in `~/.lsql/` directory
+  - Automatic migration preserves existing cache entries
+  - Legacy directory is cleaned up after successful migration
+
+### Security
+- **Enhanced Cache Security**: Database connection strings are now protected at rest in filesystem cache
+
 ## [1.2.1] - 2025-07-24
 
 ### Added

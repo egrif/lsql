@@ -33,6 +33,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   # Runtime dependencies
+  spec.add_dependency 'base64', '>= 0.1.0'
   spec.add_dependency 'concurrent-ruby', '>= 1.1', '< 2.0'
   spec.add_dependency 'moneta', '>= 1.0', '< 2.0'
   spec.add_dependency 'redis', '>= 4.0', '< 6.0'

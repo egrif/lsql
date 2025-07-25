@@ -176,6 +176,35 @@ lsql --clear-cache
 lsql --cache-prefix myteam --clear-cache
 ```
 
+### Cache Encryption
+
+For enhanced security, database URLs stored in the file cache can be encrypted using AES-256-GCM encryption:
+
+```bash
+# Enable cache encryption by setting the encryption key
+export LSQL_CACHE_KEY="your-secret-encryption-key"
+
+# Check encryption status
+lsql --cache-stats
+# Output shows: Encryption: Enabled
+
+# Without encryption key
+unset LSQL_CACHE_KEY
+lsql --cache-stats  
+# Output shows: Encryption: Disabled (set LSQL_CACHE_KEY)
+```
+
+**Cache Directory Configuration:**
+- Default location: `~/.lsql/cache`
+- Configurable via config file or `LSQL_CACHE_DIR` environment variable
+- Automatic migration from legacy location (`~/.lsql_cache`)
+
+**Security Notes:**
+- Encryption only applies to file-based cache (not Redis)
+- Redis cache doesn't need encryption (handled by Redis security)
+- Uses AES-256-GCM with unique IV per entry for maximum security
+- Key is hashed with SHA-256 to ensure consistent 32-byte encryption key
+
 ### Configuration Management
 ```bash
 # Show current configuration
@@ -280,6 +309,8 @@ lsql "SELECT * FROM large_table" -g staging -p 4 -q > results.txt
 
 | Variable | Description |
 |----------|-------------|
+| `LSQL_CACHE_KEY` | Encryption key for filesystem cache security |
+| `LSQL_CACHE_DIR` | Custom cache directory location |
 | `LSQL_CACHE_PREFIX` | Default cache key prefix |
 | `LSQL_CACHE_TTL` | Default cache TTL in minutes |
 | `REDIS_URL` | Redis connection URL for caching |

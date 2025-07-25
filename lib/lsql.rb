@@ -73,7 +73,8 @@ module Lsql
         puts "  Prefix: #{stats[:prefix]}"
         puts "  Total entries: #{stats[:total_entries]}"
         puts "  TTL: #{stats[:ttl_seconds]} seconds (#{stats[:ttl_seconds] / 60} minutes)"
-        puts "  Location: #{stats[:backend] == 'Redis' ? ENV['REDIS_URL'] || 'redis://localhost:6379' : LSQL::CacheManager::CACHE_DIR}"
+        puts "  Encryption: #{stats[:encryption]}"
+        puts "  Location: #{stats[:location]}"
         return
       end
 
