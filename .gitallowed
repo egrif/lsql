@@ -1,1 +1,2 @@
 postgresql://user:secret@host:5432/secure_db
+https://GITHUB_USERNAME:TOKEN@rubygems.pkg.github.com/egrif

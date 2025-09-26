@@ -16,16 +16,19 @@ A powerful command-line SQL tool for Lotus environments with support for paralle
 
 ### From GitHub Packages (Recommended)
 ```bash
+# If the `gem install` command below doesn't find the gem, then Configure gem source
+gem sources --add https://GITHUB_USERNAME:TOKEN@rubygems.pkg.github.com/egrif
+
+# Install the gem
+gem install lsql
+```
+or
+```bash
 # Configure bundler to use GitHub Packages
 bundle config set --global https://rubygems.pkg.github.com/egrif USERNAME:TOKEN
 
 # Install the gem
 gem install lsql --source "https://rubygems.pkg.github.com/egrif"
-
-# Or add to your Gemfile
-# source "https://rubygems.pkg.github.com/egrif" do
-#   gem "lsql"
-# end
 ```
 
 ### From GitHub Repository
