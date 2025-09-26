@@ -1,3 +1,53 @@
+## Output Format
+
+Aggregated output aligns columns and uses `env` as the prefix:
+
+```
+env      | count
+---------|------
+prod     | 358
+prod-s2  | 358
+...
+```
+## Parallel Execution
+
+LSQL supports concurrent execution across multiple environments:
+
+- **Auto CPU Detection**: Use `-p` to automatically detect CPU cores
+- **Custom Thread Count**: Use `-p 4` to specify exact thread count
+- **Progress Tracking**: Real-time progress with spinners and counters
+- **Error Isolation**: Individual environment failures don't stop other executions
+- **Performance**: Dramatically faster execution for large environment groups
+- **SSO Optimization**: Automatically establishes SSO session before parallel execution to prevent multiple authentication prompts
+## Cache Encryption
+
+Enable cache encryption by setting the encryption key:
+```bash
+export LSQL_CACHE_KEY="your-secret-encryption-key"
+lsql --cache-stats
+# Output shows: Encryption: Enabled
+```
+Without the encryption key:
+```bash
+unset LSQL_CACHE_KEY
+lsql --cache-stats  
+# Output shows: Encryption: Disabled (set LSQL_CACHE_KEY)
+```
+## Configuration Priority
+
+1. CLI arguments (highest)
+2. `~/.lsql/config.yml`
+3. Environment variables
+4. Built-in defaults (lowest)
+## Environment Variables
+
+| Variable           | Description                                      |
+|--------------------|--------------------------------------------------|
+| `LSQL_CACHE_KEY`   | Encryption key for filesystem cache              |
+| `LSQL_CACHE_DIR`   | Custom cache directory location                  |
+| `LSQL_CACHE_PREFIX`| Default cache key prefix                         |
+| `LSQL_CACHE_TTL`   | Default cache TTL in minutes                     |
+| `REDIS_URL`        | Redis connection URL for caching                 |
 # LSQL
 
 A powerful command-line SQL tool for Lotus environments with support for parallel execution, group operations, and intelligent caching.
@@ -7,11 +57,14 @@ A powerful command-line SQL tool for Lotus environments with support for paralle
 - 🚀 **Parallel Execution**: Run queries across multiple environments concurrently
 - 🎯 **Group Operations**: Execute queries on predefined environment groups
 - ⚡ **Intelligent Caching**: Redis and file-based caching with configurable TTL
-- 🔧 **Unified Configuration**: Single config file for all settings and groups
+- �️ **Encrypted Filesystem Cache**: AES-256-GCM encryption for cached database URLs (`LSQL_CACHE_KEY`)
+- 🗄️ **Configurable Cache Directory**: Set via config file or `LSQL_CACHE_DIR`
+- �🔧 **Unified Configuration**: Single config file for all settings and groups
 - 📊 **Progress Tracking**: Real-time progress indicators and execution summaries
 - 🔄 **Multiple Replicas**: Support for read-only, secondary, and custom replicas
-- 📁 **Output Management**: Aggregated or per-environment output files
+- 📁 **Output Management**: Aggregated or per-environment output files, with aligned columns and `env` prefix
 - 🤫 **Quiet Mode**: Suppress headers and summaries for clean automation output
+- 🔑 **SSO Pre-authentication**: Lotus SSO session established before parallel execution
 ## Installation
 
 ### From GitHub Packages (Recommended)
@@ -219,25 +272,27 @@ lsql --init-config
 
 ## Command-Line Options
 
-| Option | Description |
-|--------|-------------|
-| `-e ENV` | Target environment (required unless using `-g`) |
-| `-g GROUP` | Execute against environment group |
-| `-p [THREADS]` | Enable parallel execution (auto-detect cores or specify count) |
-| `-v` | Verbose output with detailed progress |
-| `-q` | Quiet mode: suppress execution summary and output headers |
-| `-n` | Disable output aggregation for group operations |
-| `-o [FILE]` | Output file (auto-generated if no filename provided) |
-| `-r REGION` | Override default region (use1/euc1/apse2) |
-| `-a APP` | Override default application (default: greenhouse) |
-| `-s SPACE` | Override default space (prod/dev) |
-| `-m MODE` | Database mode: rw/ro/secondary/tertiary/custom |
-| `--cache-prefix` | Custom cache key prefix |
-| `--cache-ttl` | Cache TTL in minutes |
-| `--cache-stats` | Show cache statistics |
-| `--clear-cache` | Clear database URL cache |
-| `--show-config` | Display current configuration |
-| `--init-config` | Create default configuration file |
+| Option / Flag                | Description                                                                                  |
+|------------------------------|----------------------------------------------------------------------------------------------|
+| `-e ENV`                     | Target environment (required unless using `-g`)                                              |
+| `-g GROUP` / `--group GROUP` | Execute against environment group; use `list` to see available groups                        |
+| `-n` / `--no-agg`            | Disable output aggregation for group operations                                              |
+| `-p [THREADS]` / `--parallel [THREADS]` | Enable parallel execution; auto-detect cores or specify count                   |
+| `-v` / `--verbose`           | Verbose output with detailed progress                                                        |
+| `-q` / `--quiet`             | Quiet mode: suppress execution summary and output headers                                    |
+| `-o [FILE]`                  | Output file (auto-generated if no filename provided)                                         |
+| `-r REGION`                  | Override default region (use1/euc1/apse2)                                                    |
+| `-a APP`                     | Override default application (default: greenhouse)                                           |
+| `-s SPACE`                   | Override default space (prod/dev)                                                            |
+| `-m MODE`                    | Database mode: rw/ro/secondary/tertiary/custom                                               |
+| `--cache-prefix PREFIX`      | Custom cache key prefix                                                                      |
+| `--cache-ttl MINUTES`        | Cache TTL in minutes                                                                         |
+| `--cache-stats`              | Show cache statistics                                                                        |
+| `--clear-cache`              | Clear database URL cache                                                                     |
+| `--show-config`              | Display current configuration                                                                |
+| `--init-config`              | Create default configuration file                                                            |
+| `-h` / `--help`              | Show help message                                                                            |
+| `--version`                  | Show version                                                                                 |
 
 ## Parallel Execution
 
