@@ -7,13 +7,16 @@ require_relative 'cache_manager'
 module Lsql
   # Handles database URL retrieval and transformation
   class DatabaseConnector
-    # Class-level cache to track pinged space/region combinations
+    # Class-level cache to track pinged space/region combinations (thread-safe)
     @@pinged_combinations = Set.new
+    @@ping_mutex = Mutex.new
     attr_reader :mode_display
 
     # Class method to reset pinged combinations cache (useful for testing or long sessions)
     def self.reset_ping_cache
-      @@pinged_combinations.clear
+      @@ping_mutex.synchronize do
+        @@pinged_combinations.clear
+      end
     end
 
     def initialize(options)
@@ -111,12 +114,23 @@ module Lsql
     private
 
     # Ensure lotus is available by pinging it for the current space/region combination
-    # Only pings once per space/region combination to avoid redundant calls
+    # Only pings once per space/region combination to avoid redundant calls (thread-safe)
     def ensure_lotus_available
       combination_key = "#{@options.space}_#{@options.region}"
       
-      # Return if we've already pinged this combination
-      return if @@pinged_combinations.include?(combination_key)
+      # Thread-safe check and update of pinged combinations
+      should_ping = false
+      
+      @@ping_mutex.synchronize do
+        unless @@pinged_combinations.include?(combination_key)
+          # Mark immediately to prevent other threads from pinging
+          @@pinged_combinations.add(combination_key)
+          should_ping = true
+        end
+      end
+      
+      # Return early if another thread already pinged this combination
+      return unless should_ping
 
       ping_cmd = "lotus ping -s #{@options.space} -r #{@options.region} > /dev/null 2>&1"
       
@@ -126,17 +140,11 @@ module Lsql
       
       if status.success?
         puts "Lotus ping successful for #{@options.space}/#{@options.region}" if @options.verbose
-        # Mark this combination as pinged
-        @@pinged_combinations.add(combination_key)
       else
         puts "Warning: Lotus ping failed for #{@options.space}/#{@options.region}. Proceeding anyway..."
-        # Still mark as pinged to avoid repeated failed attempts
-        @@pinged_combinations.add(combination_key)
       end
     rescue StandardError => e
       puts "Warning: Error pinging lotus for #{@options.space}/#{@options.region}: #{e.message}"
-      # Mark as pinged to avoid repeated errors
-      @@pinged_combinations.add(combination_key)
     end
   end
 end
