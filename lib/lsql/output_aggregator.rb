@@ -51,14 +51,14 @@ module Lsql
 
       max_env_length = calculate_max_env_length(structured_data.keys)
       all_columns = extract_all_columns(structured_data)
-      
+
       # Use PostgreSQL column widths if available, otherwise calculate from data
-      if data_extractor && !data_extractor.column_widths.empty?
-        column_widths = data_extractor.column_widths
-      else
-        column_widths = calculate_column_widths(structured_data, all_columns)
-      end
-      
+      column_widths = if data_extractor && !data_extractor.column_widths.empty?
+                        data_extractor.column_widths
+                      else
+                        calculate_column_widths(structured_data, all_columns)
+                      end
+
       output = build_header_with_columns(max_env_length, all_columns, column_widths)
       output << build_separator_line(max_env_length, all_columns, column_widths)
       output << build_data_rows_with_columns(structured_data, max_env_length, all_columns, column_widths)
@@ -85,7 +85,7 @@ module Lsql
     def calculate_column_widths(structured_data, columns)
       widths = {}
       columns.each { |col| widths[col] = col.length }
-      
+
       structured_data.each_value do |env_data|
         env_data.each do |row|
           columns.each do |col|
@@ -114,7 +114,7 @@ module Lsql
     # Build data rows with environment and column values
     def build_data_rows_with_columns(structured_data, max_env_length, columns, column_widths)
       output = String.new
-      
+
       structured_data.each do |env, env_data|
         env_data.each do |row|
           env_col = env.ljust([3, max_env_length].max)
@@ -122,7 +122,7 @@ module Lsql
           output << "#{env_col} | #{values.join(' | ')}\n"
         end
       end
-      
+
       output
     end
 

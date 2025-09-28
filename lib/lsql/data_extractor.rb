@@ -30,9 +30,7 @@ module Lsql
     end
 
     # Get extracted column width information
-    def column_widths
-      @column_widths
-    end
+    attr_reader :column_widths
 
     # Get data as JSON string
     def to_json(*_args)
@@ -55,7 +53,7 @@ module Lsql
       return [] unless header_line
 
       header_index = lines.index(header_line)
-      
+
       # Extract column names from header
       columns = extract_columns_from_header(header_line)
       return [] if columns.empty?
@@ -68,9 +66,7 @@ module Lsql
       extract_column_widths_from_separator(lines[separator_index], columns)
 
       # Extract data rows (after separator, before footer)
-      data_rows = extract_data_rows(lines, separator_index, columns)
-      
-      data_rows
+      extract_data_rows(lines, separator_index, columns)
     end
 
     # Extract column names from header line
@@ -84,9 +80,7 @@ module Lsql
     def find_separator_line(lines, start_index)
       ((start_index + 1)...lines.length).each do |i|
         line = lines[i].strip
-        if line.match?(/^-+(\+-+)*$/)
-          return i
-        end
+        return i if line.match?(/^-+(\+-+)*$/)
       end
       nil
     end
@@ -96,38 +90,36 @@ module Lsql
       # Split by + and get the length of each dash segment
       dash_segments = separator_line.strip.split('+')
       widths = dash_segments.map(&:length)
-      
+
       # Map widths to column names
       columns.each_with_index do |col, idx|
-        if idx < widths.length
-          @column_widths[col] = widths[idx]
-        end
+        @column_widths[col] = widths[idx] if idx < widths.length
       end
     end
 
     # Extract data rows and convert to hash objects
     def extract_data_rows(lines, separator_index, columns)
       data_rows = []
-      
+
       ((separator_index + 1)...lines.length).each do |i|
         line = lines[i].strip
-        
+
         # Stop at footer lines like "(1 row)" or empty lines
         break if line.empty? || line.match?(/^\(\d+\s+rows?\)$/) || line.match?(/^Time:/)
-        
+
         # Parse data row
         values = line.split('|').map(&:strip)
         next if values.length != columns.length
-        
+
         # Create hash object with column names as keys
         row_data = {}
         columns.each_with_index do |column, idx|
           row_data[column] = values[idx]
         end
-        
+
         data_rows << row_data
       end
-      
+
       data_rows
     end
   end
