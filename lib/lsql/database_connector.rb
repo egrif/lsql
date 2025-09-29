@@ -8,14 +8,19 @@ module Lsql
   # Handles database URL retrieval and transformation
   class DatabaseConnector
     # Class-level cache to track pinged space/region combinations (thread-safe)
-    @@pinged_combinations = Set.new
-    @@ping_mutex = Mutex.new
+    @pinged_combinations = Set.new
+    @ping_mutex = Mutex.new
+
+    class << self
+      attr_accessor :pinged_combinations, :ping_mutex
+    end
+
     attr_reader :mode_display
 
     # Class method to reset pinged combinations cache (useful for testing or long sessions)
     def self.reset_ping_cache
-      @@ping_mutex.synchronize do
-        @@pinged_combinations.clear
+      @ping_mutex.synchronize do
+        @pinged_combinations.clear
       end
     end
 
@@ -23,27 +28,27 @@ module Lsql
     def self.ping_space_region_combinations(combinations, verbose: false)
       combinations.each do |space, region|
         combination_key = "#{space}_#{region}"
-        
+
         # Thread-safe check to avoid duplicate pings
         should_ping = false
-        @@ping_mutex.synchronize do
-          unless @@pinged_combinations.include?(combination_key)
-            @@pinged_combinations.add(combination_key)
+        @ping_mutex.synchronize do
+          unless @pinged_combinations.include?(combination_key)
+            @pinged_combinations.add(combination_key)
             should_ping = true
           end
         end
-        
+
         next unless should_ping
-        
+
         ping_cmd = "lotus ping -s #{space} -r #{region} > /dev/null 2>&1"
         puts "Pre-pinging lotus for space: #{space}, region: #{region}..." if verbose
-        
+
         _, _, status = Open3.capture3(ping_cmd)
-        
+
         if status.success?
           puts "Lotus ping successful for #{space}/#{region}" if verbose
-        else
-          puts "Warning: Lotus ping failed for #{space}/#{region}. Proceeding anyway..." if verbose
+        elsif verbose
+          puts "Warning: Lotus ping failed for #{space}/#{region}. Proceeding anyway..."
         end
       rescue StandardError => e
         puts "Warning: Error pinging lotus for #{space}/#{region}: #{e.message}" if verbose
@@ -145,14 +150,14 @@ module Lsql
     # This should be called after pre-pinging has been done
     def ensure_lotus_available
       combination_key = "#{@options.space}_#{@options.region}"
-      
-      @@ping_mutex.synchronize do
-        unless @@pinged_combinations.include?(combination_key)
+
+      self.class.ping_mutex.synchronize do
+        unless self.class.pinged_combinations.include?(combination_key)
           puts "Warning: Lotus not pre-pinged for #{@options.space}/#{@options.region}. Consider pre-pinging before parallel execution." if @options.verbose
           return false
         end
       end
-      
+
       true
     end
   end

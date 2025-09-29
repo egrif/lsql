@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'lsql/database_connector'
 
@@ -24,7 +26,7 @@ RSpec.describe Lsql::DatabaseConnector do
 
   describe '.ping_space_region_combinations' do
     it 'pings lotus with the correct space and region parameters' do
-      combinations = [['prod', 'use1']]
+      combinations = [%w[prod use1]]
       expect(Open3).to receive(:capture3)
         .with('lotus ping -s prod -r use1 > /dev/null 2>&1')
         .and_return([nil, nil, double('status', success?: true)])
@@ -33,8 +35,8 @@ RSpec.describe Lsql::DatabaseConnector do
     end
 
     it 'only pings once for the same space/region combination' do
-      combinations = [['prod', 'use1'], ['prod', 'use1']]
-      
+      combinations = [%w[prod use1], %w[prod use1]]
+
       # Should only ping once even though combination is listed twice
       expect(Open3).to receive(:capture3)
         .with('lotus ping -s prod -r use1 > /dev/null 2>&1')
@@ -45,7 +47,7 @@ RSpec.describe Lsql::DatabaseConnector do
     end
 
     it 'pings separately for different space/region combinations' do
-      combinations = [['prod', 'use1'], ['dev', 'euc1']]
+      combinations = [%w[prod use1], %w[dev euc1]]
 
       # Should ping for first combination
       expect(Open3).to receive(:capture3)
@@ -63,7 +65,7 @@ RSpec.describe Lsql::DatabaseConnector do
     end
 
     it 'handles ping failures gracefully and continues' do
-      combinations = [['prod', 'use1']]
+      combinations = [%w[prod use1]]
       expect(Open3).to receive(:capture3)
         .with('lotus ping -s prod -r use1 > /dev/null 2>&1')
         .and_return([nil, nil, double('status', success?: false)])
@@ -73,7 +75,7 @@ RSpec.describe Lsql::DatabaseConnector do
     end
 
     it 'handles ping exceptions gracefully' do
-      combinations = [['prod', 'use1']]
+      combinations = [%w[prod use1]]
       expect(Open3).to receive(:capture3)
         .with('lotus ping -s prod -r use1 > /dev/null 2>&1')
         .and_raise(StandardError, 'Connection failed')
@@ -86,8 +88,8 @@ RSpec.describe Lsql::DatabaseConnector do
   describe '#ensure_lotus_available' do
     it 'returns true when combination has been pre-pinged' do
       # Pre-ping the combination
-      described_class.ping_space_region_combinations([['prod', 'use1']])
-      
+      described_class.ping_space_region_combinations([%w[prod use1]])
+
       expect(connector.send(:ensure_lotus_available)).to be true
     end
 
@@ -100,7 +102,7 @@ RSpec.describe Lsql::DatabaseConnector do
     it 'clears the pinged combinations cache' do
       # Ping once to populate cache
       allow(Open3).to receive(:capture3).and_return([nil, nil, double('status', success?: true)])
-      described_class.ping_space_region_combinations([['prod', 'use1']])
+      described_class.ping_space_region_combinations([%w[prod use1]])
 
       # Verify cache is populated
       expect(connector.send(:ensure_lotus_available)).to be true
