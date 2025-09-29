@@ -13,19 +13,23 @@ RSpec.describe Lsql::CommandLineParser do
   end
 
   it 'parses input file argument (currently returns nil)' do
-    args = ['-i', 'input.sql']
+    args = ['-i', 'input.sql', '-e', 'test']
     options = parser.parse(args)
     expect(options[:input_file]).to be_nil
   end
 
   it 'parses output file argument' do
-    args = ['-o', 'output.txt']
+    args = ['-o', 'output.txt', '-e', 'test']
     options = parser.parse(args)
     expect(options[:output_file]).to eq('output.txt')
   end
 
   it 'shows help with -h' do
     args = ['-h']
-    expect { parser.parse(args) }.to output(/Usage:/).to_stdout_from_any_process
+    expect {
+      expect { parser.parse(args) }.to raise_error(SystemExit) do |error|
+        expect(error.status).to eq(0)
+      end
+    }.to output(/Usage:/).to_stdout
   end
 end
