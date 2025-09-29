@@ -66,8 +66,8 @@ RSpec.describe LSQL::ConfigManager do
       end
 
       it 'returns empty hash and warns' do
-        expect { described_class.load_config }.to output(/Warning: Failed to load config file/).to_stdout
-        config = described_class.load_config
+        config = nil
+        expect { config = described_class.load_config }.to output(/Warning: Failed to load config file/).to_stdout
         expect(config).to eq({})
       end
     end
@@ -215,7 +215,7 @@ RSpec.describe LSQL::ConfigManager do
 
   describe '.create_default_config' do
     it 'creates default config file when it does not exist' do
-      described_class.create_default_config
+      expect { described_class.create_default_config }.to output(/Created default config file/).to_stdout
 
       expect(File.exist?(test_config_file)).to be true
       content = File.read(test_config_file)
@@ -229,20 +229,20 @@ RSpec.describe LSQL::ConfigManager do
       FileUtils.mkdir_p(test_config_dir)
       File.write(test_config_file, 'existing content')
 
-      described_class.create_default_config
+      expect { described_class.create_default_config }.to_not output.to_stdout
 
       expect(File.read(test_config_file)).to eq('existing content')
     end
 
     it 'creates directory structure if needed' do
-      described_class.create_default_config
+      expect { described_class.create_default_config }.to output(/Created default config file/).to_stdout
 
       expect(Dir.exist?(test_config_dir)).to be true
       expect(File.exist?(test_config_file)).to be true
     end
 
     it 'includes cache directory in default config' do
-      described_class.create_default_config
+      expect { described_class.create_default_config }.to output(/Created default config file/).to_stdout
 
       content = File.read(test_config_file)
       expect(content).to include('directory:')
