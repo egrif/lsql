@@ -40,9 +40,14 @@ module Lsql
       hostname = @database_connector.extract_hostname(database_url)
       puts "Connecting to: #{hostname}"
 
-      # Determine the prompt color based on the environment
-      prompt_color = @options.env =~ /^prod/i ? COLORS[:red] : COLORS[:green]
-      reset_color = COLORS[:reset]
+      # Determine the prompt color based on the environment (unless --no-color is specified)
+      if @options.no_color
+        prompt_color = ''
+        reset_color = ''
+      else
+        prompt_color = @options.env =~ /^prod/i ? COLORS[:red] : COLORS[:green]
+        reset_color = COLORS[:reset]
+      end
       # Use the mode_display set during URL transformation
       psql_prompt = "#{prompt_color}#{@options.env}#{@database_connector.mode_display}:%/%R%##{reset_color} "
 
