@@ -26,6 +26,6 @@ RSpec.describe Lsql::CommandLineParser do
 
   it 'shows help with -h' do
     args = ['-h']
-    expect { parser.parse(args) }.to output(/Usage:/).to_stdout
+    expect { parser.parse(args) }.to output(/Usage:/).to_stdout_from_any_process
   end
 end

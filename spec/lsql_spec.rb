@@ -22,23 +22,27 @@ RSpec.describe Lsql::Application do
     let(:app) { described_class.new }
 
     it 'handles --help flag' do
-      expect { app.run(['--help']) }.to raise_error(SystemExit) do |error|
+      expect {
+        expect { app.run(['--help']) }.to output.to_stdout
+      }.to raise_error(SystemExit) do |error|
         expect(error.status).to eq(0)
       end
     end
 
     it 'handles invalid arguments gracefully' do
-      expect { app.run(['--invalid-flag']) }.to raise_error(SystemExit) do |error|
+      expect {
+        expect { app.run(['--invalid-flag']) }.to output(/Error:.*invalid/).to_stdout
+      }.to raise_error(SystemExit) do |error|
         expect(error.status).to eq(1)
       end
     end
 
     it 'handles show-config option' do
-      expect { app.run(['--show-config']) }.not_to raise_error
+      expect { app.run(['--show-config']) }.to output(/Configuration/).to_stdout
     end
 
     it 'handles init-config option' do
-      expect { app.run(['--init-config']) }.not_to raise_error
+      expect { app.run(['--init-config']) }.to output(/Configuration file created/).to_stdout
     end
   end
 end
