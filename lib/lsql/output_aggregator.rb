@@ -2,6 +2,9 @@
 
 require 'tempfile'
 require 'open3'
+require 'json'
+require 'set'
+require_relative 'data_extractor'
 
 module Lsql
   # Handles aggregated output for group operations
@@ -9,7 +12,6 @@ module Lsql
     def initialize(options)
       @options = options
       @temp_files = []
-      @header_written = false
     end
 
     def create_temp_file(env)
@@ -25,61 +27,12 @@ module Lsql
     def aggregate_output(output_file = nil)
       return if @temp_files.empty?
 
-      output_stream = output_file ? File.open(output_file, 'w') : $stdout
+      data_extractor = DataExtractor.new
+      structured_data = data_extractor.extract_from_temp_files(@temp_files)
 
-      # Calculate the maximum environment name length for alignment
-      max_env_length = @temp_files.map { |temp_info| temp_info[:env].length }.max
-
-      begin
-        @temp_files.each_with_index do |temp_info, index|
-          env = temp_info[:env]
-          temp_file = temp_info[:file]
-
-          # Ensure the temp file is closed and data is written
-          temp_file.close unless temp_file.closed?
-
-          next unless File.exist?(temp_file.path) && File.size(temp_file.path).positive?
-
-          lines = File.readlines(temp_file.path)
-          next if lines.empty?
-
-          if index.zero? || !@header_written
-            # For the first environment, write the header with environment column
-            header_lines = extract_header_lines(lines)
-            if header_lines.any?
-              # Calculate proper column width (at least 3 chars for "env", but adjust to fit longest env name)
-              env_column_width = [3, max_env_length].max
-              env_header = 'env'.ljust(env_column_width)
-
-              header_lines.each_with_index do |line, line_index|
-                if line.match?(/^\s*-+(\s*\|\s*-+)*\s*$/)
-                  # Separator line - add dashes for environment column with proper spacing
-                  env_separator = '-' * env_column_width
-                  output_stream.puts "#{env_separator} | #{line.chomp}"
-                elsif line_index.zero? && !line.strip.empty?
-                  # First header line - add environment column
-                  output_stream.puts "#{env_header} | #{line.chomp}"
-                else
-                  # Other header lines (empty lines, etc.)
-                  padding = ' ' * env_column_width
-                  output_stream.puts "#{padding} | #{line.chomp}"
-                end
-              end
-            end
-            @header_written = true
-          end
-
-          # Write data lines with environment prefix
-          data_lines = extract_data_lines(lines)
-          data_lines.each do |line|
-            prefixed_line = prefix_line_with_env(line, env, max_env_length)
-            output_stream.puts prefixed_line
-          end
-        end
-      ensure
-        output_stream.close if output_file && output_stream != $stdout
-        cleanup_temp_files
-      end
+      output = format_output(structured_data, data_extractor)
+      write_or_print_output(output, output_file)
+      cleanup_temp_files
     end
 
     def cleanup_temp_files
@@ -92,69 +45,94 @@ module Lsql
 
     private
 
-    def extract_header_lines(lines)
-      header_lines = []
+    # Format structured data into readable text output
+    def format_output(structured_data, data_extractor = nil)
+      return '' if structured_data.empty?
 
-      lines.each_with_index do |line, index|
-        # Include header lines and the separator line
-        if line.match?(/^\s*-+(\s*\|\s*-+)*\s*$/) || line.match?(/^\s*=+\s*$/)
-          # This is a separator line - include it and stop
-          header_lines << line
-          break
-        elsif index.zero? || line.strip.empty? || is_likely_header(line, index)
-          header_lines << line
-        else
-          # If we hit a non-header line before finding a separator,
-          # assume no proper table format
-          break
+      max_env_length = calculate_max_env_length(structured_data.keys)
+      all_columns = extract_all_columns(structured_data)
+
+      # Use PostgreSQL column widths if available, otherwise calculate from data
+      column_widths = if data_extractor && !data_extractor.column_widths.empty?
+                        data_extractor.column_widths
+                      else
+                        calculate_column_widths(structured_data, all_columns)
+                      end
+
+      output = build_header_with_columns(max_env_length, all_columns, column_widths)
+      output << build_separator_line(max_env_length, all_columns, column_widths)
+      output << build_data_rows_with_columns(structured_data, max_env_length, all_columns, column_widths)
+      output
+    end
+
+    # Calculate maximum environment name length for alignment
+    def calculate_max_env_length(env_names)
+      env_names.map(&:length).max || 0
+    end
+
+    # Extract all unique column names from all environments
+    def extract_all_columns(structured_data)
+      columns = Set.new
+      structured_data.each_value do |env_data|
+        env_data.each do |row|
+          columns.merge(row.keys)
+        end
+      end
+      columns.to_a
+    end
+
+    # Calculate column widths for proper alignment
+    def calculate_column_widths(structured_data, columns)
+      widths = {}
+      columns.each { |col| widths[col] = col.length }
+
+      structured_data.each_value do |env_data|
+        env_data.each do |row|
+          columns.each do |col|
+            value_length = (row[col] || '').to_s.length
+            widths[col] = [widths[col], value_length].max
+          end
+        end
+      end
+      widths
+    end
+
+    # Build header row with environment and all columns
+    def build_header_with_columns(max_env_length, columns, column_widths)
+      env_header = 'env'.ljust([3, max_env_length].max)
+      column_headers = columns.map { |col| col.ljust(column_widths[col]) }
+      "#{env_header} | #{column_headers.join(' | ')}\n"
+    end
+
+    # Build separator line
+    def build_separator_line(max_env_length, columns, column_widths)
+      env_sep = '-' * [3, max_env_length].max
+      col_seps = columns.map { |col| '-' * column_widths[col] }
+      "#{env_sep}-+-#{col_seps.join('-+-')}\n"
+    end
+
+    # Build data rows with environment and column values
+    def build_data_rows_with_columns(structured_data, max_env_length, columns, column_widths)
+      output = String.new
+
+      structured_data.each do |env, env_data|
+        env_data.each do |row|
+          env_col = env.ljust([3, max_env_length].max)
+          values = columns.map { |col| (row[col] || '').ljust(column_widths[col]) }
+          output << "#{env_col} | #{values.join(' | ')}\n"
         end
       end
 
-      header_lines
+      output
     end
 
-    def extract_data_lines(lines)
-      data_lines = []
-      found_separator = false
-
-      lines.each do |line|
-        if line.match?(/^\s*-+(\s*\|\s*-+)*\s*$/) || line.match?(/^\s*=+\s*$/)
-          found_separator = true
-          next
-        end
-
-        # Skip metadata lines like "(X rows)" or timing information
-        next if line.match?(/^\s*\(\d+\s+rows?\)\s*$/)
-        next if line.match?(/Time:/)
-
-        if found_separator && !line.strip.empty?
-          data_lines << line
-        elsif !found_separator && !is_likely_header(line, 0) && !line.strip.empty?
-          # If no separator found, assume everything after potential headers is data
-          data_lines << line
-        end
+    # Write output to file or print to stdout
+    def write_or_print_output(output, output_file)
+      if output_file
+        File.write(output_file, output)
+      else
+        print output
       end
-
-      data_lines
-    end
-
-    def is_likely_header(line, index)
-      # Column headers are typically in the first few lines and contain letters
-      return false if index > 3
-
-      # Check if line looks like column headers (contains letters, spaces, pipes)
-      line.match?(/^[a-zA-Z\s|_-]+$/) && line.include?(' ')
-    end
-
-    def prefix_line_with_env(line, env, max_env_length)
-      # Remove trailing newline, add environment prefix with proper alignment, restore newline
-      clean_line = line.chomp
-      return clean_line if clean_line.strip.empty?
-
-      # Use the same column width calculation as in the header
-      env_column_width = [3, max_env_length].max
-      padded_env = env.ljust(env_column_width)
-      "#{padded_env} | #{clean_line}"
     end
   end
 end

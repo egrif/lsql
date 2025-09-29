@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-09-29
+
+### Added
+- **Lotus Ping Functionality**: Prevents lotus autodownload errors during execution
+  - Pre-pings lotus for each unique space/region combination before parallel execution
+  - Thread-safe ping caching using mutex synchronization to avoid duplicate pings
+  - Graceful error handling with warnings for failed pings
+  - Verbose output shows ping status and timing for debugging
+
+- **Cache-Aware Ping Optimization**: Intelligent ping strategy based on cache status
+  - Only pings lotus when database URLs are not cached for that environment
+  - Significantly reduces unnecessary lotus calls for cached environments
+  - Maintains reliability while optimizing performance
+  - Verbose output distinguishes between "cached - no lotus ping needed" and "not cached - will need lotus ping"
+
+- **Pre-Ping Strategy**: Separates ping phase from execution phase
+  - Analyzes all environments in group operation before starting parallel execution
+  - Pings required space/region combinations upfront to establish sessions
+  - Ensures parallel threads can execute without ping delays or conflicts
+  - Maintains true parallel performance while preventing autodownload issues
+
+### Fixed
+- **Thread-Safe Parallel Execution**: Restored full parallel performance
+  - Fixed thread-unsafe Set operations that were causing sequential execution instead of parallel
+  - Replaced class variables with thread-safe class instance variables
+  - Added proper mutex synchronization for shared ping cache state
+  - Parallel execution timing restored (0.8s vs 16s sequential)
+
+- **Code Quality Improvements**: Enhanced maintainability and Ruby best practices
+  - Refactored OutputAggregator with SOLID design principles
+  - Created dedicated DataExtractor class for separation of concerns
+  - Replaced class variables (@@) with class instance variables (@) for thread safety
+  - Added frozen string literal comments to all spec files
+  - Cleaned up empty test files and fixed file permissions
+
+### Performance
+- **Optimized Group Operations**: Significant performance improvements for group queries
+  - True parallel execution restored with proper thread safety
+  - Smart ping optimization reduces lotus overhead
+  - Cache-aware strategy minimizes unnecessary operations
+  - Pre-ping phase eliminates delays during parallel execution
+
 ## [1.2.2] - 2025-01-01
 
 ### Added
