@@ -22,40 +22,30 @@ RSpec.describe Lsql::DatabaseConnector do
     described_class.reset_ping_cache
   end
 
-  describe '#ensure_lotus_available' do
+  describe '.ping_space_region_combinations' do
     it 'pings lotus with the correct space and region parameters' do
+      combinations = [['prod', 'use1']]
       expect(Open3).to receive(:capture3)
         .with('lotus ping -s prod -r use1 > /dev/null 2>&1')
         .and_return([nil, nil, double('status', success?: true)])
 
-      # Call the private method using send
-      connector.send(:ensure_lotus_available)
+      described_class.ping_space_region_combinations(combinations)
     end
 
     it 'only pings once for the same space/region combination' do
-      # First call should ping
+      combinations = [['prod', 'use1'], ['prod', 'use1']]
+      
+      # Should only ping once even though combination is listed twice
       expect(Open3).to receive(:capture3)
         .with('lotus ping -s prod -r use1 > /dev/null 2>&1')
         .once
         .and_return([nil, nil, double('status', success?: true)])
 
-      # Call twice with same space/region
-      connector.send(:ensure_lotus_available)
-      connector.send(:ensure_lotus_available)
+      described_class.ping_space_region_combinations(combinations)
     end
 
     it 'pings separately for different space/region combinations' do
-      options2 = double(
-        'options2',
-        space: 'dev',
-        region: 'euc1',
-        env: 'test2',
-        application: 'myapp',
-        verbose: false,
-        cache_ttl: 10,
-        cache_prefix: 'test'
-      )
-      connector2 = described_class.new(options2)
+      combinations = [['prod', 'use1'], ['dev', 'euc1']]
 
       # Should ping for first combination
       expect(Open3).to receive(:capture3)
@@ -69,26 +59,40 @@ RSpec.describe Lsql::DatabaseConnector do
         .once
         .and_return([nil, nil, double('status', success?: true)])
 
-      connector.send(:ensure_lotus_available)
-      connector2.send(:ensure_lotus_available)
+      described_class.ping_space_region_combinations(combinations)
     end
 
     it 'handles ping failures gracefully and continues' do
+      combinations = [['prod', 'use1']]
       expect(Open3).to receive(:capture3)
         .with('lotus ping -s prod -r use1 > /dev/null 2>&1')
         .and_return([nil, nil, double('status', success?: false)])
 
       # Should not raise an error
-      expect { connector.send(:ensure_lotus_available) }.not_to raise_error
+      expect { described_class.ping_space_region_combinations(combinations) }.not_to raise_error
     end
 
     it 'handles ping exceptions gracefully' do
+      combinations = [['prod', 'use1']]
       expect(Open3).to receive(:capture3)
         .with('lotus ping -s prod -r use1 > /dev/null 2>&1')
         .and_raise(StandardError, 'Connection failed')
 
       # Should not raise an error
-      expect { connector.send(:ensure_lotus_available) }.not_to raise_error
+      expect { described_class.ping_space_region_combinations(combinations) }.not_to raise_error
+    end
+  end
+
+  describe '#ensure_lotus_available' do
+    it 'returns true when combination has been pre-pinged' do
+      # Pre-ping the combination
+      described_class.ping_space_region_combinations([['prod', 'use1']])
+      
+      expect(connector.send(:ensure_lotus_available)).to be true
+    end
+
+    it 'returns false when combination has not been pre-pinged' do
+      expect(connector.send(:ensure_lotus_available)).to be false
     end
   end
 
@@ -96,18 +100,16 @@ RSpec.describe Lsql::DatabaseConnector do
     it 'clears the pinged combinations cache' do
       # Ping once to populate cache
       allow(Open3).to receive(:capture3).and_return([nil, nil, double('status', success?: true)])
-      connector.send(:ensure_lotus_available)
+      described_class.ping_space_region_combinations([['prod', 'use1']])
+
+      # Verify cache is populated
+      expect(connector.send(:ensure_lotus_available)).to be true
 
       # Reset cache
       described_class.reset_ping_cache
 
-      # Should ping again after reset
-      expect(Open3).to receive(:capture3)
-        .with('lotus ping -s prod -r use1 > /dev/null 2>&1')
-        .once
-        .and_return([nil, nil, double('status', success?: true)])
-
-      connector.send(:ensure_lotus_available)
+      # Verify cache is cleared
+      expect(connector.send(:ensure_lotus_available)).to be false
     end
   end
 end

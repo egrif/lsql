@@ -4,6 +4,7 @@ require 'yaml'
 require 'pathname'
 require 'concurrent-ruby'
 require 'open3'
+require 'set'
 require_relative 'config_manager'
 
 module Lsql
@@ -50,6 +51,9 @@ module Lsql
       # Use aggregation unless --no-agg flag is specified
       aggregator = @options.no_agg ? nil : OutputAggregator.new(@options)
       original_output_file = @options.output_file
+
+      # Pre-ping lotus for all unique space/region combinations before execution
+      pre_ping_lotus_combinations(environments)
 
       # Execute environments (parallel or sequential)
       results = if @options.parallel
@@ -341,6 +345,31 @@ module Lsql
       end
 
       puts "\nTotal environments processed: #{results.length}"
+    end
+
+    # Pre-ping lotus for all unique space/region combinations for the given environments
+    def pre_ping_lotus_combinations(environments)
+      # Determine unique space/region combinations for all environments
+      combinations = Set.new
+      
+      environments.each do |env|
+        # Create temporary options to determine space and region for each environment
+        env_options = @options.dup
+        env_options.env = env
+        
+        # Initialize environment manager to determine space and region
+        EnvironmentManager.new(env_options)
+        
+        # Add the space/region combination
+        combinations.add([env_options.space, env_options.region])
+      end
+      
+      # Pre-ping all unique combinations
+      if combinations.any?
+        puts "Pre-pinging lotus for #{combinations.size} unique space/region combination(s)..." if @options.verbose || !@options.quiet
+        DatabaseConnector.ping_space_region_combinations(combinations.to_a, verbose: @options.verbose)
+        puts "Lotus pre-ping completed." if @options.verbose || !@options.quiet
+      end
     end
   end
 end

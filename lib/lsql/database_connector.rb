@@ -19,6 +19,37 @@ module Lsql
       end
     end
 
+    # Class method to pre-ping specific space/region combinations before parallel execution
+    def self.ping_space_region_combinations(combinations, verbose: false)
+      combinations.each do |space, region|
+        combination_key = "#{space}_#{region}"
+        
+        # Thread-safe check to avoid duplicate pings
+        should_ping = false
+        @@ping_mutex.synchronize do
+          unless @@pinged_combinations.include?(combination_key)
+            @@pinged_combinations.add(combination_key)
+            should_ping = true
+          end
+        end
+        
+        next unless should_ping
+        
+        ping_cmd = "lotus ping -s #{space} -r #{region} > /dev/null 2>&1"
+        puts "Pre-pinging lotus for space: #{space}, region: #{region}..." if verbose
+        
+        _, _, status = Open3.capture3(ping_cmd)
+        
+        if status.success?
+          puts "Lotus ping successful for #{space}/#{region}" if verbose
+        else
+          puts "Warning: Lotus ping failed for #{space}/#{region}. Proceeding anyway..." if verbose
+        end
+      rescue StandardError => e
+        puts "Warning: Error pinging lotus for #{space}/#{region}: #{e.message}" if verbose
+      end
+    end
+
     def initialize(options)
       @options = options
       @mode_display = ''
@@ -30,9 +61,6 @@ module Lsql
     end
 
     def get_database_url
-      # Ensure lotus is available for this space/region combination
-      ensure_lotus_available
-
       # Check if URL is cached using all lotus parameters for uniqueness
       cached_url = nil
       if @cache.url_cached_for_params?(@options.space, @options.env, @options.region, @options.application)
@@ -113,38 +141,19 @@ module Lsql
 
     private
 
-    # Ensure lotus is available by pinging it for the current space/region combination
-    # Only pings once per space/region combination to avoid redundant calls (thread-safe)
+    # Check if lotus is available for this space/region combination
+    # This should be called after pre-pinging has been done
     def ensure_lotus_available
       combination_key = "#{@options.space}_#{@options.region}"
       
-      # Thread-safe check and update of pinged combinations
-      should_ping = false
-      
       @@ping_mutex.synchronize do
         unless @@pinged_combinations.include?(combination_key)
-          # Mark immediately to prevent other threads from pinging
-          @@pinged_combinations.add(combination_key)
-          should_ping = true
+          puts "Warning: Lotus not pre-pinged for #{@options.space}/#{@options.region}. Consider pre-pinging before parallel execution." if @options.verbose
+          return false
         end
       end
       
-      # Return early if another thread already pinged this combination
-      return unless should_ping
-
-      ping_cmd = "lotus ping -s #{@options.space} -r #{@options.region} > /dev/null 2>&1"
-      
-      puts "Ensuring lotus availability for space: #{@options.space}, region: #{@options.region}..." if @options.verbose
-      
-      _, _, status = Open3.capture3(ping_cmd)
-      
-      if status.success?
-        puts "Lotus ping successful for #{@options.space}/#{@options.region}" if @options.verbose
-      else
-        puts "Warning: Lotus ping failed for #{@options.space}/#{@options.region}. Proceeding anyway..."
-      end
-    rescue StandardError => e
-      puts "Warning: Error pinging lotus for #{@options.space}/#{@options.region}: #{e.message}"
+      true
     end
   end
 end
