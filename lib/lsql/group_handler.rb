@@ -347,10 +347,11 @@ module Lsql
       puts "\nTotal environments processed: #{results.length}"
     end
 
-    # Pre-ping lotus for all unique space/region combinations for the given environments
+    # Pre-ping lotus only for space/region combinations where we need to call lotus
+    # (i.e., where database URLs are not cached)
     def pre_ping_lotus_combinations(environments)
-      # Determine unique space/region combinations for all environments
-      combinations = Set.new
+      # Check each environment to see if it needs a lotus call
+      combinations_needing_ping = Set.new
       
       environments.each do |env|
         # Create temporary options to determine space and region for each environment
@@ -360,15 +361,26 @@ module Lsql
         # Initialize environment manager to determine space and region
         EnvironmentManager.new(env_options)
         
-        # Add the space/region combination
-        combinations.add([env_options.space, env_options.region])
+        # Check if database URL is already cached for this environment
+        temp_connector = DatabaseConnector.new(env_options)
+        cache = temp_connector.instance_variable_get(:@cache)
+        
+        unless cache.url_cached_for_params?(env_options.space, env_options.env, env_options.region, env_options.application)
+          # URL not cached - we'll need to call lotus, so ping is required
+          combinations_needing_ping.add([env_options.space, env_options.region])
+          puts "Environment #{env} not cached - will need lotus ping for #{env_options.space}/#{env_options.region}" if @options.verbose
+        else
+          puts "Environment #{env} cached - no lotus ping needed for #{env_options.space}/#{env_options.region}" if @options.verbose
+        end
       end
       
-      # Pre-ping all unique combinations
-      if combinations.any?
-        puts "Pre-pinging lotus for #{combinations.size} unique space/region combination(s)..." if @options.verbose || !@options.quiet
-        DatabaseConnector.ping_space_region_combinations(combinations.to_a, verbose: @options.verbose)
+      # Pre-ping only the combinations that need lotus calls
+      if combinations_needing_ping.any?
+        puts "Pre-pinging lotus for #{combinations_needing_ping.size} space/region combination(s) that need fresh database URLs..." if @options.verbose || !@options.quiet
+        DatabaseConnector.ping_space_region_combinations(combinations_needing_ping.to_a, verbose: @options.verbose)
         puts "Lotus pre-ping completed." if @options.verbose || !@options.quiet
+      else
+        puts "All database URLs cached - no lotus pings needed!" if @options.verbose || !@options.quiet
       end
     end
   end
