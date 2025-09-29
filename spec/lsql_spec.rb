@@ -24,17 +24,13 @@ RSpec.describe Lsql::Application do
     it 'handles --help flag' do
       expect do
         expect { app.run(['--help']) }.to output.to_stdout
-      end.to raise_error(SystemExit) do |error|
-        expect(error.status).to eq(0)
-      end
+      end.to raise_error(SystemExit) { |error| expect(error.status).to eq(0) }
     end
 
     it 'handles invalid arguments gracefully' do
       expect do
         expect { app.run(['--invalid-flag']) }.to output(/Error:.*invalid/).to_stdout
-      end.to raise_error(SystemExit) do |error|
-        expect(error.status).to eq(1)
-      end
+      end.to raise_error(SystemExit) { |error| expect(error.status).to eq(1) }
     end
 
     it 'handles show-config option' do
