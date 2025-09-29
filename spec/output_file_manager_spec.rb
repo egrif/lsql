@@ -4,7 +4,7 @@ require 'spec_helper'
 require 'lsql/output_file_manager'
 
 RSpec.describe Lsql::OutputFileManager do
-  let(:options) { OpenStruct.new(output_file: nil, env: 'test') }
+  let(:options) { Struct.new(:output_file, :env).new(nil, 'test') }
   let(:manager) { described_class.new(options) }
 
   it 'initializes without output file' do

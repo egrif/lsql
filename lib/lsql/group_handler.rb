@@ -9,6 +9,7 @@ require_relative 'config_manager'
 
 module Lsql
   # Handles group-based operations across multiple environments
+  # rubocop:disable Metrics/ClassLength
   class GroupHandler
     def initialize(options)
       @options = options
@@ -384,4 +385,5 @@ module Lsql
       end
     end
   end
+  # rubocop:enable Metrics/ClassLength
 end
