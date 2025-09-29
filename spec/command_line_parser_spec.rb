@@ -32,4 +32,35 @@ RSpec.describe Lsql::CommandLineParser do
       end
     end.to output(/Usage:/).to_stdout
   end
+
+  it 'parses no-agg option with -A' do
+    args = ['-A', '-e', 'test']
+    options = parser.parse(args)
+    expect(options.no_agg).to be true
+  end
+
+  it 'parses no-agg option with --no-agg' do
+    args = ['--no-agg', '-e', 'test']
+    options = parser.parse(args)
+    expect(options.no_agg).to be true
+  end
+
+  it 'parses no-color option with -C' do
+    args = ['-C', '-e', 'test']
+    options = parser.parse(args)
+    expect(options.no_color).to be true
+  end
+
+  it 'parses no-color option with --no-color' do
+    args = ['--no-color', '-e', 'test']
+    options = parser.parse(args)
+    expect(options.no_color).to be true
+  end
+
+  it 'defaults no-agg and no-color to false' do
+    args = ['-e', 'test']
+    options = parser.parse(args)
+    expect(options.no_agg).to be false
+    expect(options.no_color).to be false
+  end
 end

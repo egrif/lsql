@@ -2,6 +2,7 @@
 
 require 'optparse'
 require 'ostruct'
+require_relative 'output_file_manager'
 
 module Lsql
   # Handles command-line option parsing
@@ -17,6 +18,7 @@ module Lsql
         mode: 'rw',
         group: nil,
         no_agg: false,
+        no_color: false,
         verbose: false,
         quiet: false,
         clear_cache: false,
@@ -54,9 +56,14 @@ module Lsql
           @options.group = group
         end
 
-        opts.on('-n', '--no-agg', 'Disable output aggregation for group operations',
+        opts.on('-A', '--no-agg', 'Disable output aggregation for group operations',
                 '  By default, group output is aggregated with environment prefixes') do
           @options.no_agg = true
+        end
+
+        opts.on('-C', '--no-color', 'Disable color codes for interactive psql sessions',
+                '  Only affects interactive sessions, not query result output') do
+          @options.no_color = true
         end
 
         opts.on('-p', '--parallel [THREADS]', Integer, 'Enable parallel execution for group operations',
@@ -154,7 +161,7 @@ module Lsql
         opts.separator "  #{File.basename($PROGRAM_NAME)} -e prod01 -m secondary            # Connect using secondary replica"
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT count(*) FROM users\" -g staging # Run query on all staging environments"
         opts.separator "  #{File.basename($PROGRAM_NAME)} query.sql -g us-prod -o results    # Run query file on all US production environments"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -n # Run query with separate output per environment"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -A # Run query with separate output per environment"
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -v # Run query with verbose progress output"
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -p # Run query with parallel execution (auto CPU cores)"
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -p 4 # Run query with 4 parallel threads"
