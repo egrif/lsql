@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-01-05
+
+### Added
+- **Format Output Options**: New `-f/--format` option for structured data export
+  - Supports CSV, TXT, JSON, and YAML output formats for non-interactive mode
+  - CSV format preserves column headers and handles special characters properly
+  - JSON and YAML formats use environment names as root keys for better organization
+  - TXT format provides clean, readable plain text output
+  - Works seamlessly with group operations and aggregated results
+  - Format validation ensures only supported formats are accepted
+
+- **Enhanced Prompt Customization**: New `--no-color/-C` option for prompt control
+  - Disables ANSI color codes in interactive session prompts
+  - Provides clean prompts suitable for automation and logging
+  - Maintains full functionality while removing color formatting
+
+- **Improved VPN Error Detection**: Better user experience for connection failures
+  - Detects DNS resolution failures that indicate VPN disconnection
+  - Provides helpful error messages suggesting VPN connection check
+  - Graceful handling of network connectivity issues
+
+### Changed
+- **Command Line Interface**: Updated option shortcuts for consistency
+  - Changed `--no-agg` shorthand from `-n` to `-A` for better mnemonics
+  - Maintains backward compatibility with long form `--no-agg`
+  - Improved help documentation with clearer option descriptions
+
+- **Output Structure**: Enhanced JSON/YAML organization
+  - JSON and YAML outputs now use environment names as root keys instead of arrays
+  - Provides more intuitive data structure for programmatic consumption
+  - Maintains compatibility with existing parsing while improving usability
+
+### Fixed
+- **Output Aggregation**: Resolved format conversion issues
+  - Fixed aggregated output being empty when format options were specified
+  - Corrected method visibility for output file operations
+  - Improved temporary file handling to prevent format conflicts
+  - Enhanced error handling for edge cases in format conversion
+
+## [1.3.0] - 2025-01-05log
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## [1.3.0] - 2025-09-29
 
 ### Added

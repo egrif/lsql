@@ -63,4 +63,39 @@ RSpec.describe Lsql::CommandLineParser do
     expect(options.no_agg).to be false
     expect(options.no_color).to be false
   end
+
+  it 'parses format option with -f csv' do
+    args = ['-f', 'csv', '-e', 'test']
+    options = parser.parse(args)
+    expect(options.format).to eq('csv')
+  end
+
+  it 'parses format option with --format json' do
+    args = ['--format', 'json', '-e', 'test']
+    options = parser.parse(args)
+    expect(options.format).to eq('json')
+  end
+
+  it 'parses format option with yaml value' do
+    args = ['-f', 'yaml', '-e', 'test']
+    options = parser.parse(args)
+    expect(options.format).to eq('yaml')
+  end
+
+  it 'parses format option with txt value' do
+    args = ['--format', 'txt', '-e', 'test']
+    options = parser.parse(args)
+    expect(options.format).to eq('txt')
+  end
+
+  it 'defaults format to nil' do
+    args = ['-e', 'test']
+    options = parser.parse(args)
+    expect(options.format).to be_nil
+  end
+
+  it 'raises error for invalid format' do
+    args = ['-f', 'invalid', '-e', 'test']
+    expect { parser.parse(args) }.to raise_error(OptionParser::InvalidArgument)
+  end
 end

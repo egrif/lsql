@@ -34,4 +34,50 @@ RSpec.describe Lsql::OutputFileManager do
     options.output_file = 'output.txt'
     expect(manager.get_psql_options).to eq('')
   end
+
+  describe 'format option handling' do
+    let(:options_with_format) { Struct.new(:output_file, :env, :format).new(nil, 'test', nil) }
+    let(:manager_with_format) { described_class.new(options_with_format) }
+
+    it 'provides psql options for CSV format' do
+      options_with_format.format = 'csv'
+      expect(manager_with_format.get_psql_options).to include('-t -A -F","')
+    end
+
+    it 'provides psql options for JSON format' do
+      options_with_format.format = 'json'
+      expect(manager_with_format.get_psql_options).to include('-t -A')
+    end
+
+    it 'provides psql options for YAML format' do
+      options_with_format.format = 'yaml'
+      expect(manager_with_format.get_psql_options).to include('-t -A')
+    end
+
+    it 'provides psql options for TXT format' do
+      options_with_format.format = 'txt'
+      expect(manager_with_format.get_psql_options).to include('-t -A')
+    end
+
+    it 'detects format from file extension when format option not specified' do
+      options_with_format.output_file = 'output.json'
+      expect(manager_with_format.get_psql_options).to include('-t -A')
+
+      options_with_format.output_file = 'output.yaml'
+      expect(manager_with_format.get_psql_options).to include('-t -A')
+
+      options_with_format.output_file = 'output.yml'
+      expect(manager_with_format.get_psql_options).to include('-t -A')
+    end
+
+    it 'format option overrides file extension detection' do
+      options_with_format.output_file = 'output.txt'
+      options_with_format.format = 'csv'
+      expect(manager_with_format.get_psql_options).to include('-t -A -F","')
+    end
+
+    it 'returns empty options when no format and no output file' do
+      expect(manager_with_format.get_psql_options).to eq('')
+    end
+  end
 end

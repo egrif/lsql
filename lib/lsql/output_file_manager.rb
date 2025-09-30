@@ -42,10 +42,34 @@ module Lsql
     end
 
     def get_psql_options
-      return '' unless @options.output_file
+      return '' unless @options.output_file || (@options.respond_to?(:format) && @options.format)
 
-      # Determine additional options based on file extension
-      @options.output_file.end_with?('.csv') ? '-t -A -F"," ' : ''
+      # If format is explicitly specified, use format-specific options
+      # BUT never apply format options to temp files used by aggregator
+      if @options.respond_to?(:format) && @options.format && !temp_file?
+        case @options.format
+        when 'csv'
+          '-t -A -F"," '
+        when 'json', 'yaml', 'txt'
+          '-t -A '
+        else
+          ''
+        end
+      else
+        # For file extension-based detection, only apply to non-temp files
+        # Temp files (used by aggregator) should use default psql formatting
+        return '' if temp_file?
+
+        format = determine_format_from_extension
+        case format
+        when 'csv'
+          '-t -A -F"," '
+        when 'json', 'yaml'
+          '-t -A '
+        else
+          ''
+        end
+      end
     end
 
     def append_sql_command_to_output_file(sql_command)
@@ -73,6 +97,25 @@ module Lsql
         file.puts '/* SQL file content:'
         file.puts File.read(sql_file)
         file.puts '*/'
+      end
+    end
+
+    private
+
+    def determine_format_from_extension
+      return nil unless @options.output_file
+
+      case File.extname(@options.output_file).downcase
+      when '.csv'
+        'csv'
+      when '.json'
+        'json'
+      when '.yaml', '.yml'
+        'yaml'
+      when '.txt'
+        'txt'
+      else
+        nil
       end
     end
   end

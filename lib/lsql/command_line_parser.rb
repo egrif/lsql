@@ -19,6 +19,7 @@ module Lsql
         group: nil,
         no_agg: false,
         no_color: false,
+        format: nil,
         verbose: false,
         quiet: false,
         clear_cache: false,
@@ -31,6 +32,7 @@ module Lsql
       )
     end
 
+    # rubocop:disable Metrics/MethodLength
     def parse(args)
       # First check if the first argument is an SQL command
       @options.sql_command = args.shift if args.first && !args.first.start_with?('-')
@@ -64,6 +66,12 @@ module Lsql
         opts.on('-C', '--no-color', 'Disable color codes for interactive psql sessions',
                 '  Only affects interactive sessions, not query result output') do
           @options.no_color = true
+        end
+
+        opts.on('-f FORMAT', '--format FORMAT', %w[csv txt json yaml],
+                'Output format for non-interactive mode (csv, txt, json, yaml)',
+                '  Only affects SQL command/file execution, not interactive sessions') do |format|
+          @options.format = format
         end
 
         opts.on('-p', '--parallel [THREADS]', Integer, 'Enable parallel execution for group operations',
@@ -210,5 +218,6 @@ module Lsql
 
       @options
     end
+    # rubocop:enable Metrics/MethodLength
   end
 end

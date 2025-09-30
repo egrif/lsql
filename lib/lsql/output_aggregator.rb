@@ -30,9 +30,101 @@ module Lsql
       data_extractor = DataExtractor.new
       structured_data = data_extractor.extract_from_temp_files(@temp_files)
 
-      output = format_output(structured_data, data_extractor)
+      # Apply format conversion if specified, otherwise use default tabular format
+      output = if @options.respond_to?(:format) && @options.format
+                 convert_to_format(structured_data)
+               else
+                 format_output(structured_data, data_extractor)
+               end
+
       write_or_print_output(output, output_file)
       cleanup_temp_files
+    end
+
+    def convert_to_format(structured_data)
+      # Convert structured data to the requested format
+      case @options.format
+      when 'json'
+        convert_to_json(structured_data)
+      when 'yaml'
+        convert_to_yaml(structured_data)
+      when 'csv'
+        convert_to_csv(structured_data)
+      when 'txt'
+        convert_to_txt(structured_data)
+      else
+        # Fallback to default tabular format
+        format_output(structured_data)
+      end
+    end
+
+    def convert_to_json(structured_data)
+      require 'json'
+
+      # Structure data with environment names as root keys
+      env_grouped_data = {}
+      structured_data.each do |env, env_data|
+        env_grouped_data[env] = env_data
+      end
+
+      JSON.pretty_generate(env_grouped_data)
+    end
+
+    def convert_to_yaml(structured_data)
+      require 'yaml'
+
+      # Structure data with environment names as root keys
+      env_grouped_data = {}
+      structured_data.each do |env, env_data|
+        env_grouped_data[env] = env_data
+      end
+
+      env_grouped_data.to_yaml
+    end
+
+    def convert_to_csv(structured_data)
+      return '' if structured_data.empty?
+
+      # Get all unique columns
+      all_columns = Set.new(['env'])
+      structured_data.each_value do |env_data|
+        env_data.each { |row| all_columns.merge(row.keys) }
+      end
+      columns = all_columns.to_a
+
+      # Build CSV output
+      output = "#{columns.join(',')}\n"
+      structured_data.each do |env, env_data|
+        env_data.each do |row|
+          row_values = columns.map { |col| col == 'env' ? env : (row[col] || '') }
+          output << "#{row_values.join(',')}\n"
+        end
+      end
+
+      output
+    end
+
+    def convert_to_txt(structured_data)
+      # For TXT format, use tab-separated values
+      return '' if structured_data.empty?
+
+      # Get all unique columns
+      all_columns = Set.new(['env'])
+      structured_data.each_value do |env_data|
+        env_data.each { |row| all_columns.merge(row.keys) }
+      end
+      columns = all_columns.to_a
+
+      # Build tab-separated output
+      output = "#{columns.join("\t")}\n"
+      structured_data.each do |env, env_data|
+        env_data.each do |row|
+          row_values = columns.map { |col| col == 'env' ? env : (row[col] || '') }
+          output << "#{row_values.join("\t")}\n"
+        end
+      end
+
+      output
     end
 
     def cleanup_temp_files
