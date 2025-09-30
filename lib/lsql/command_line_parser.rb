@@ -10,25 +10,25 @@ module Lsql
     def initialize
       @options = OpenStruct.new(
         env: nil,
-        region: nil,
-        application: 'greenhouse',
-        space: nil,
-        output_file: nil,
-        sql_command: nil,
-        mode: 'rw',
         group: nil,
         no_agg: false,
         no_color: false,
         format: nil,
         verbose: false,
         quiet: false,
+        output_file: nil,
+        region: nil,
+        application: 'greenhouse',
+        space: nil,
+        mode: 'rw',
+        sql_command: nil,
         clear_cache: false,
         cache_prefix: nil,
-        cache_stats: false,
         cache_ttl: nil,
+        cache_stats: false,
         show_config: false,
         init_config: false,
-        parallel: nil
+        parallel: 0
       )
     end
 
@@ -39,7 +39,7 @@ module Lsql
 
       # Parse options
       option_parser = OptionParser.new do |opts|
-        opts.banner = "Usage: #{File.basename($PROGRAM_NAME)} [<SQL_COMMAND>] [options]"
+        opts.banner = "lsql v#{Lsql::VERSION}\nUsage: #{File.basename($PROGRAM_NAME)} [<SQL_COMMAND>] [options]"
 
         opts.separator ''
         opts.separator 'SQL_COMMAND can be:'
@@ -74,10 +74,15 @@ module Lsql
           @options.format = format
         end
 
-        opts.on('-p', '--parallel [THREADS]', Integer, 'Enable parallel execution for group operations',
-                '  Specify number of concurrent threads (default: number of CPU cores)',
+        opts.on('-p [THREADS]', '--parallel [THREADS]', Integer, 'Set number of parallel threads for group operations',
+                '  Specify number of concurrent threads (default: auto-detect CPU cores)',
                 '  Use with caution - high concurrency may impact database performance') do |threads|
           @options.parallel = threads || 0 # 0 means auto-detect CPU cores
+        end
+
+        opts.on('-P', '--no-parallel', 'Disable parallel execution for group operations',
+                '  Forces sequential execution instead of default parallel execution') do
+          @options.parallel = false
         end
 
         opts.on('-v', '--verbose', 'Enable verbose output for group operations',
@@ -154,6 +159,11 @@ module Lsql
           @options.init_config = true
         end
 
+        opts.on('--version', 'Display version information') do
+          puts "lsql v#{Lsql::VERSION}"
+          exit
+        end
+
         opts.on('-h', '--help', 'Display this help message') do
           puts opts
           exit
@@ -171,8 +181,8 @@ module Lsql
         opts.separator "  #{File.basename($PROGRAM_NAME)} query.sql -g us-prod -o results    # Run query file on all US production environments"
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -A # Run query with separate output per environment"
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -v # Run query with verbose progress output"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -p # Run query with parallel execution (auto CPU cores)"
         opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -p 4 # Run query with 4 parallel threads"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -P # Run query with sequential execution (no parallel)"
         opts.separator "  #{File.basename($PROGRAM_NAME)} -g list                        # List all available groups"
         opts.separator "  #{File.basename($PROGRAM_NAME)} --clear-cache                 # Clear persistent cached database URLs"
         opts.separator "  #{File.basename($PROGRAM_NAME)} --cache-prefix myapp --clear-cache # Clear cache with custom prefix"

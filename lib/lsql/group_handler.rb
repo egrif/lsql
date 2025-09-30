@@ -42,7 +42,9 @@ module Lsql
       end
 
       puts "Executing command for group '#{@options.group}' with environments: #{environments.join(', ')}"
-      if @options.parallel
+      if @options.parallel == false
+        puts 'Using sequential execution (parallel disabled)'
+      else
         thread_count = @options.parallel.zero? ? Concurrent.processor_count : @options.parallel
         puts "Using parallel execution with #{thread_count} threads"
       end
@@ -56,13 +58,13 @@ module Lsql
       # Pre-ping lotus for all unique space/region combinations before execution
       pre_ping_lotus_combinations(environments)
 
-      # Execute environments (parallel or sequential)
-      results = if @options.parallel
+      # Execute environments (parallel by default, sequential if --no-parallel specified)
+      results = if @options.parallel == false
+                  execute_environments_sequential(environments, aggregator)
+                else
                   # Pre-authenticate with Lotus SSO before parallel execution to avoid multiple SSO prompts
                   pre_authenticate_lotus_sso(environments.first) if environments.any?
                   execute_environments_parallel(environments, aggregator)
-                else
-                  execute_environments_sequential(environments, aggregator)
                 end
 
       # If using aggregation, handle output appropriately

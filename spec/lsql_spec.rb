@@ -57,6 +57,16 @@ RSpec.describe Lsql::CommandLineParser do
       expect(options.group).to eq('staging')
     end
 
+    it 'defaults to parallel execution (auto-detect cores)' do
+      options = parser.parse(['-e', 'test'])
+      expect(options.parallel).to eq(0)
+    end
+
+    it 'parses no-parallel option' do
+      options = parser.parse(['-e', 'test', '-P'])
+      expect(options.parallel).to be false
+    end
+
     it 'parses parallel option with threads' do
       options = parser.parse(['-e', 'test', '-p', '4'])
       expect(options.parallel).to eq(4)

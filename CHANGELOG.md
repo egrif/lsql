@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2025-09-30
+
+### Added
+- **Version Information Display**: New `--version` flag and version in help
+  - Added `--version` flag to display current version information
+  - Version number now prominently displayed in help banner
+  - Follows standard CLI conventions for version reporting
+
+- **Enhanced Parallel Execution Control**: Improved parallel execution options
+  - Parallel execution now enabled by default for group operations (auto-detect CPU cores)
+  - Added `-p [THREADS]` option to specify custom thread count or use auto-detection
+  - Added `-P/--no-parallel` option to disable parallel execution entirely
+  - Maintains backward compatibility while providing better performance defaults
+
+### Changed
+- **Default Behavior**: Group operations now use parallel execution by default
+  - Automatic CPU core detection for optimal performance
+  - Improved user experience with faster multi-environment queries
+  - Sequential execution still available via `-P/--no-parallel` option
+
 ## [1.4.0] - 2025-01-05
 
 ### Added
