@@ -40,16 +40,37 @@ module Lsql
       hostname = @database_connector.extract_hostname(database_url)
       puts "Connecting to: #{hostname}"
 
-      # Determine the prompt color based on the environment (unless --no-color is specified)
+      # Construct the base prompt
       if @options.no_color
-        prompt_color = ''
-        reset_color = ''
+        # No color version - strip ANSI codes from the original prompt and add prefix
+        base_prompt = "#{@options.env}#{@database_connector.mode_display}:%/%R%# "
+
+        # Create the prefix with space and mode
+        space_display = (@options.space || 'UNKNOWN').upcase
+        mode_display = if @database_connector.mode_display.empty?
+                         'RW'
+                       else
+                         # Extract mode from [RO-PRIMARY] -> R1, [RO-SECONDARY] -> R2, etc.
+                         case @database_connector.mode_display
+                         when '[RO-PRIMARY]'
+                           'R1'
+                         when '[RO-SECONDARY]'
+                           'R2'
+                         when '[RO-TERTIARY]'
+                           'R3'
+                         else
+                           @database_connector.mode_display.gsub(/[\[\]]/, '').upcase
+                         end
+                       end
+
+        # Prefix the original prompt with SPACE:MODE >
+        psql_prompt = "#{space_display}:#{mode_display} > #{base_prompt}"
       else
+        # Colored version with ANSI codes
         prompt_color = @options.env =~ /^prod/i ? COLORS[:red] : COLORS[:green]
         reset_color = COLORS[:reset]
+        psql_prompt = "#{prompt_color}#{@options.env}#{@database_connector.mode_display}:%/%R%##{reset_color} "
       end
-      # Use the mode_display set during URL transformation
-      psql_prompt = "#{prompt_color}#{@options.env}#{@database_connector.mode_display}:%/%R%##{reset_color} "
 
       # Pass the custom prompt directly to psql
       system("psql \"#{database_url}\" --set=PROMPT1=\"#{psql_prompt}\" --set=PROMPT2=\"#{psql_prompt}\"")
