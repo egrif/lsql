@@ -64,6 +64,42 @@ RSpec.describe Lsql::CommandLineParser do
     expect(options.no_color).to be false
   end
 
+  it 'defaults parallel to 0 (auto-detect cores)' do
+    args = ['-e', 'test']
+    options = parser.parse(args)
+    expect(options.parallel).to eq(0)
+  end
+
+  it 'parses no-parallel option with -P' do
+    args = ['-P', '-e', 'test']
+    options = parser.parse(args)
+    expect(options.parallel).to be false
+  end
+
+  it 'parses no-parallel option with --no-parallel' do
+    args = ['--no-parallel', '-e', 'test']
+    options = parser.parse(args)
+    expect(options.parallel).to be false
+  end
+
+  it 'parses parallel option with specific thread count' do
+    args = ['-p', '4', '-e', 'test']
+    options = parser.parse(args)
+    expect(options.parallel).to eq(4)
+  end
+
+  it 'parses parallel option without thread count (auto-detect)' do
+    args = ['-p', '-e', 'test']
+    options = parser.parse(args)
+    expect(options.parallel).to eq(0)
+  end
+
+  it 'parses parallel option with --parallel' do
+    args = ['--parallel', '8', '-e', 'test']
+    options = parser.parse(args)
+    expect(options.parallel).to eq(8)
+  end
+
   it 'parses format option with -f csv' do
     args = ['-f', 'csv', '-e', 'test']
     options = parser.parse(args)
@@ -97,5 +133,14 @@ RSpec.describe Lsql::CommandLineParser do
   it 'raises error for invalid format' do
     args = ['-f', 'invalid', '-e', 'test']
     expect { parser.parse(args) }.to raise_error(OptionParser::InvalidArgument)
+  end
+
+  it 'shows version with --version' do
+    args = ['--version']
+    expect do
+      expect { parser.parse(args) }.to raise_error(SystemExit) do |error|
+        expect(error.status).to eq(0)
+      end
+    end.to output("lsql v#{Lsql::VERSION}\n").to_stdout
   end
 end

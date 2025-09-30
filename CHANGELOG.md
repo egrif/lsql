@@ -26,6 +26,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Provides helpful error messages suggesting VPN connection check
   - Graceful handling of network connectivity issues
 
+- **Version Information Display**: New `--version` flag and version in help
+  - Added `--version` flag to display current version information
+  - Version number now prominently displayed in help banner
+  - Follows standard CLI conventions for version reporting
+
+- **Enhanced Parallel Execution Control**: Improved parallel execution options
+  - Parallel execution now enabled by default for group operations (auto-detect CPU cores)
+  - Added `-p [THREADS]` option to specify custom thread count or use auto-detection
+  - Added `-P/--no-parallel` option to disable parallel execution entirely
+  - Maintains backward compatibility while providing better performance defaults
+
 ### Changed
 - **Command Line Interface**: Updated option shortcuts for consistency
   - Changed `--no-agg` shorthand from `-n` to `-A` for better mnemonics
