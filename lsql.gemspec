@@ -13,7 +13,7 @@ Gem::Specification.new do |spec|
                      'with support for groups, parallel execution, and caching.'
   spec.homepage = 'https://github.com/egrif/lsql'
   spec.license = 'MIT'
-  spec.required_ruby_version = '>= 3.0.0'
+  spec.required_ruby_version = '>= 2.7.0'
 
   spec.metadata['homepage_uri'] = spec.homepage
   spec.metadata['source_code_uri'] = 'https://github.com/egrif/lsql'
@@ -33,9 +33,10 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   # Runtime dependencies
-  spec.add_dependency 'base64', '>= 0.1.0'
+  spec.add_dependency 'base64', '~> 0.1', '>= 0.1.0'
   spec.add_dependency 'concurrent-ruby', '>= 1.1', '< 2.0'
   spec.add_dependency 'moneta', '>= 1.0', '< 2.0'
+  spec.add_dependency 'ostruct', '~> 0.1', '>= 0.1.0'
   spec.add_dependency 'redis', '>= 4.0', '< 6.0'
 
   # Development dependencies
