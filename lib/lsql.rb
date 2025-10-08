@@ -114,25 +114,7 @@ module Lsql
         end
 
         # Display aggregated output (same logic as in GroupHandler)
-        if aggregator
-          if original_output_file
-            # When outputting to a file, don't display aggregated results to stdout
-            # Just aggregate to the file and show the file path
-            aggregator.aggregate_output(original_output_file)
-            puts "\n#{'=' * 60}"
-            puts 'OUTPUT WRITTEN TO FILE'
-            puts '=' * 60
-            puts "File: #{original_output_file}"
-          else
-            # When no output file specified, display aggregated results to stdout
-            unless options.quiet
-              puts "\n#{'=' * 60}"
-              puts 'AGGREGATED OUTPUT'
-              puts '=' * 60
-            end
-            aggregator.aggregate_output(original_output_file)
-          end
-        end
+        display_aggregated_output(aggregator, original_output_file, options) if aggregator
         return
       end
 
@@ -149,6 +131,32 @@ module Lsql
       # Execute SQL
       executor = SqlExecutor.new(primary_options, output_manager, db_connector)
       executor.execute(database_url)
+    end
+
+    private
+
+    def display_aggregated_output(aggregator, original_output_file, options)
+      if original_output_file
+        # When outputting to a file, don't display aggregated results to stdout
+        # Just aggregate to the file and show the file path
+        aggregator.aggregate_output(original_output_file)
+        puts "\n#{'=' * 60}"
+        puts 'OUTPUT WRITTEN TO FILE'
+        puts '=' * 60
+        puts "File: #{original_output_file}"
+      else
+        # When no output file specified, display aggregated results to stdout
+        display_aggregated_header(options)
+        aggregator.aggregate_output(original_output_file)
+      end
+    end
+
+    def display_aggregated_header(options)
+      return if options.quiet
+
+      puts "\n#{'=' * 60}"
+      puts 'AGGREGATED OUTPUT'
+      puts '=' * 60
     end
   end
 end

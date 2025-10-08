@@ -59,7 +59,10 @@ describe 'CommandLineParser' do
 end
 
 describe 'EnvironmentManager' do
-  let(:options) { OpenStruct.new(env: nil, space: nil, region: nil, sql_command: 'SELECT 1') }
+  let(:options) do
+    Struct.new(:env, :space, :region, :sql_command, keyword_init: true)
+          .new(env: nil, space: nil, region: nil, sql_command: 'SELECT 1')
+  end
 
   describe 'single environment' do
     before { options.env = 'prod01' }
