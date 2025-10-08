@@ -2,13 +2,30 @@
 
 Aggregated output aligns columns and uses `env` as the prefix:
 
-```
-env      | count
----------|------
-prod     | 358
-prod-s2  | 358
-...
-```
+# LSQL
+
+A powerful command-line SQL tool for Lotus environments with support for parallel execution, group operations, and intelligent caching.
+
+## Features
+
+- 🚀 **Parallel Execution**: Run queries across multiple environments concurrently with auto-detection or custom thread counts
+- 🎯 **Environment Groups**: Execute queries on predefined environment groups with unified configuration
+- ⚡ **Intelligent Caching**: Redis and file-based caching with configurable TTL and automatic cache management
+- 🔒 **Encrypted Filesystem Cache**: AES-256-GCM encryption for cached database URLs with `LSQL_CACHE_KEY`
+- 🗄️ **Configurable Cache Directory**: Customizable cache location via config file or `LSQL_CACHE_DIR` environment variable
+- 🔧 **Unified Configuration**: Single `~/.lsql/config.yml` file for all settings, groups, and preferences
+- 📊 **Real-time Progress Tracking**: Progress indicators, spinners, and comprehensive execution summaries
+- 🔄 **Multiple Database Replicas**: Support for read-only, secondary, tertiary, and custom database replicas
+- 📁 **Advanced Output Management**: Aggregated or per-environment output files with perfect column alignment
+- 📋 **Multiple Output Formats**: Support for table, CSV, JSON, YAML, and tab-separated formats
+- 🤫 **Quiet Mode**: Clean output without headers or summaries for automation and scripting
+- 🔑 **SSO Pre-authentication**: Automatic Lotus SSO session establishment before parallel execution
+- 🎨 **Color-coded Interface**: Environment-aware color coding (red for production, green for development)
+- 🔍 **Environment Auto-detection**: Automatic region and space detection with override capabilities
+- 📈 **Cache Statistics**: Detailed cache usage statistics and TTL information
+- 🧹 **Cache Management**: Selective cache clearing with prefix support and automatic cleanup
+- 🔧 **Configuration Management**: Easy configuration viewing, initialization, and validation
+- 🏗️ **Modular Architecture**: Clean separation of concerns with comprehensive error handling
 ## Parallel Execution
 
 LSQL supports concurrent execution across multiple environments:
@@ -169,106 +186,7 @@ groups:
 3. Environment variables
 4. Built-in defaults (lowest)
 
-## Usage Examples
-
-### Basic Operations
-```bash
-# Interactive session
-lsql -e dev01
-
-# Execute SQL statement
-lsql "SELECT * FROM users LIMIT 10" -e prod01
-
-# Execute SQL file
-lsql query.sql -e staging -o results.txt
-```
-
-### Group Operations
-```bash
-# List all groups
-lsql -g list
-
-# Run on all staging environments
-lsql "SELECT count(*) FROM orders" -g staging
-
-# Parallel execution with 4 threads
-lsql "SELECT * FROM users" -g staging -p 4
-
-# Verbose parallel execution
-lsql "SELECT count(*) FROM products" -g staging -p 4 -v
-
-# Quiet mode for clean output (no headers or summaries)
-lsql "SELECT count(*) FROM users" -g staging -q
-
-# No output aggregation (separate results)
-lsql "SELECT count(*) FROM users" -g staging -n
-```
-
-### Advanced Options
-```bash
-# Custom cache settings
-lsql "SELECT 1" -e dev01 --cache-prefix myteam --cache-ttl 30
-
-# Different database replicas
-lsql "SELECT count(*) FROM users" -e prod01 -m ro          # Read-only
-lsql "SELECT count(*) FROM users" -e prod01 -m secondary   # Secondary replica
-
-# Custom region/application
-lsql "SELECT 1" -e dev01 -r euc1 -a myapp
-
-# Quiet mode for automation/scripting
-lsql "SELECT count(*) FROM users" -g staging -q > user_counts.txt
-```
-
-### Cache Management
-```bash
-# Show cache statistics
-lsql --cache-stats
-
-# Clear cache
-lsql --clear-cache
-
-# Clear cache with custom prefix
-lsql --cache-prefix myteam --clear-cache
-```
-
-### Cache Encryption
-
-For enhanced security, database URLs stored in the file cache can be encrypted using AES-256-GCM encryption:
-
-```bash
-# Enable cache encryption by setting the encryption key
-export LSQL_CACHE_KEY="your-secret-encryption-key"
-
-# Check encryption status
-lsql --cache-stats
-# Output shows: Encryption: Enabled
-
-# Without encryption key
-unset LSQL_CACHE_KEY
-lsql --cache-stats  
-# Output shows: Encryption: Disabled (set LSQL_CACHE_KEY)
-```
-
-**Cache Directory Configuration:**
-- Default location: `~/.lsql/cache`
-- Configurable via config file or `LSQL_CACHE_DIR` environment variable
-- Automatic migration from legacy location (`~/.lsql_cache`)
-
-**Security Notes:**
-- Encryption only applies to file-based cache (not Redis)
-- Redis cache doesn't need encryption (handled by Redis security)
-- Uses AES-256-GCM with unique IV per entry for maximum security
-- Key is hashed with SHA-256 to ensure consistent 32-byte encryption key
-
-### Configuration Management
-```bash
-# Show current configuration
-lsql --show-config
-
-# Initialize with default config
-lsql --init-config
-```
+For comprehensive usage examples and advanced scenarios, see [USAGE.md](USAGE.md).
 
 ## Command-Line Options
 
@@ -305,63 +223,7 @@ LSQL supports concurrent execution across multiple environments:
 - **Performance**: Dramatically faster execution for large environment groups
 - **SSO Optimization**: Automatically establishes SSO session before parallel execution to prevent multiple authentication prompts
 
-### Parallel Execution Examples
-```bash
-# Auto-detect CPU cores
-lsql "SELECT count(*) FROM users" -g staging -p
 
-# Use 8 threads
-lsql "SELECT count(*) FROM orders" -g production -p 8
-
-# Parallel with verbose output
-lsql "SELECT count(*) FROM products" -g staging -p 4 -v
-
-# Parallel with quiet mode (clean output for automation)
-lsql "SELECT count(*) FROM users" -g staging -p 4 -q
-
-# Parallel with separate output files
-lsql query.sql -g staging -p 4 -n -o results
-```
-
-## Quiet Mode
-
-The `--quiet` (or `-q`) option suppresses execution summaries and output headers, providing clean results perfect for automation and scripting:
-
-### Normal Output
-```
-============================================================
-AGGREGATED OUTPUT
-============================================================
-[Query results here]
-
-============================================================
-EXECUTION SUMMARY
-============================================================
-✓ Successful: 3
-  staging, staging-s2, staging-s3
-
-Total environments processed: 3
-```
-
-### Quiet Output
-```
-[Query results only - no headers or summaries]
-```
-
-### Quiet Mode Examples
-```bash
-# Save clean query results to file
-lsql "SELECT id, name FROM users" -g staging -q > users.csv
-
-# Use in scripts for automated reporting
-COUNT=$(lsql "SELECT count(*) FROM orders" -g production -q)
-
-# Chain with other commands
-lsql "SELECT email FROM users WHERE active = true" -g staging -q | grep -E "@company\.com$"
-
-# Combine with parallel execution for performance
-lsql "SELECT * FROM large_table" -g staging -p 4 -q > results.txt
-```
 
 ## Environment Variables
 

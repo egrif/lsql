@@ -170,36 +170,20 @@ module Lsql
         end
 
         opts.separator ''
-        opts.separator 'Examples:'
-        opts.separator "  #{File.basename($PROGRAM_NAME)} -e dev01                          # Start interactive session for dev01"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -e prod01   # Run query on prod01"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} query.sql -e staging -o results   # Run query file on staging and save results"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} -e dev01 -r use1 -a customapp     # Connect to customapp in use1 region"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} -e prod01 -m ro                   # Connect using primary replica"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} -e prod01 -m secondary            # Connect using secondary replica"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT count(*) FROM users\" -g staging # Run query on all staging environments"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} query.sql -g us-prod -o results    # Run query file on all US production environments"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -A # Run query with separate output per environment"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -v # Run query with verbose progress output"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -p 4 # Run query with 4 parallel threads"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -g staging -P # Run query with sequential execution (no parallel)"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} -g list                        # List all available groups"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} --clear-cache                 # Clear persistent cached database URLs"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} --cache-prefix myapp --clear-cache # Clear cache with custom prefix"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} --cache-stats                 # Show cache statistics and TTL info"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} --show-config                 # Show current configuration settings"
-        opts.separator "  #{File.basename($PROGRAM_NAME)} --init-config                 # Create default configuration file"
+        opts.separator 'Quick Examples:'
+        opts.separator "  #{File.basename($PROGRAM_NAME)} -e dev01                          # Start interactive session"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT * FROM users\" -e prod01   # Run query on environment"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} \"SELECT count(*) FROM users\" -g staging # Run on group"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} query.sql -g production -p 4      # Parallel execution"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} -g list                        # List available groups"
+        opts.separator "  #{File.basename($PROGRAM_NAME)} --init-config                 # Initialize configuration"
+        opts.separator ''
+        opts.separator 'For comprehensive usage examples and advanced scenarios, see:'
+        opts.separator '  https://github.com/egrif/lsql/blob/main/USAGE.md'
         opts.separator ''
         opts.separator 'Configuration:'
-        opts.separator '  Settings priority: CLI arguments > ~/.lsql/config.yml > environment variables > defaults'
-        opts.separator '  Configuration file example (~/.lsql/config.yml):'
-        opts.separator '    cache:'
-        opts.separator '      prefix: "myteam"'
-        opts.separator '      ttl_minutes: 15'
-        opts.separator '    groups:'
-        opts.separator '      my-envs:'
-        opts.separator '        description: "My custom environments"'
-        opts.separator '        environments: ["env1", "env2"]'
+        opts.separator '  File: ~/.lsql/config.yml'
+        opts.separator '  Priority: CLI args > config file > env vars > defaults'
         opts.separator '  Environment variables: LSQL_CACHE_PREFIX, LSQL_CACHE_TTL, LSQL_CACHE_DIR, LSQL_CACHE_KEY'
       end
 
