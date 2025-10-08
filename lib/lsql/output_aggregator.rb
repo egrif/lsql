@@ -138,18 +138,15 @@ module Lsql
     private
 
     # Format structured data into readable text output
-    def format_output(structured_data, data_extractor = nil)
+    def format_output(structured_data, _data_extractor = nil)
       return '' if structured_data.empty?
 
       max_env_length = calculate_max_env_length(structured_data.keys)
       all_columns = extract_all_columns(structured_data)
 
-      # Use PostgreSQL column widths if available, otherwise calculate from data
-      column_widths = if data_extractor && !data_extractor.column_widths.empty?
-                        data_extractor.column_widths
-                      else
-                        calculate_column_widths(structured_data, all_columns)
-                      end
+      # Always calculate column widths from aggregated data to ensure proper alignment
+      # PostgreSQL column widths are only accurate for single-environment outputs
+      column_widths = calculate_column_widths(structured_data, all_columns)
 
       output = build_header_with_columns(max_env_length, all_columns, column_widths)
       output << build_separator_line(max_env_length, all_columns, column_widths)
