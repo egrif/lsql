@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2025-10-07
+
+### Fixed
+- **Output Formatting**: Fixed column alignment in aggregated output
+  - Resolved issue where columns were misaligned when displaying results from multiple environments
+  - Column widths now properly calculated from all aggregated data rather than individual environment outputs
+  - Ensures proper table formatting for group operations (`-g` flag) with multiple environments
+
 ## [1.5.1] - 2025-10-02
 
 ### Added
