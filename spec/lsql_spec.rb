@@ -112,7 +112,7 @@ RSpec.describe LSQL::ConfigManager do
     it 'returns TTL in seconds' do
       result = LSQL::ConfigManager.get_cache_ttl
       expect(result).to be_a(Integer)
-      expect(result).to eq(28800) # 480 minutes in seconds (8 hours)
+      expect(result).to eq(28_800) # 480 minutes in seconds (8 hours)
     end
   end
 end

@@ -12,11 +12,11 @@ RSpec.describe Lsql::SqlExecutor do
   describe 'prompt configuration integration' do
     it 'uses ConfigManager for color settings' do
       allow(LSQL::ConfigManager).to receive(:get_prompt_colors).and_return({
-        'production' => "\033[0;31m",
-        'development' => "\033[0;32m",
-        'reset' => "\033[0m"
-      })
-      
+                                                                             'production' => "\033[0;31m",
+                                                                             'development' => "\033[0;32m",
+                                                                             'reset' => "\033[0m"
+                                                                           })
+
       expect(LSQL::ConfigManager).to receive(:get_prompt_colors)
       sql_executor.send(:build_colored_prompt)
     end
