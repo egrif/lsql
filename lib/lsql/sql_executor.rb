@@ -54,7 +54,7 @@ module Lsql
     end
 
     def build_plain_prompt
-      templates = ConfigManager.get_prompt_templates
+      templates = LSQL::ConfigManager.get_prompt_templates
       template = templates['plain'] || '{space}:{mode_short} > {env}{mode}:%/%R%# '
 
       # Create variables for substitution
@@ -69,12 +69,12 @@ module Lsql
     end
 
     def build_colored_prompt
-      templates = ConfigManager.get_prompt_templates
-      colors = ConfigManager.get_prompt_colors
+      templates = LSQL::ConfigManager.get_prompt_templates
+      colors = LSQL::ConfigManager.get_prompt_colors
       template = templates['colored'] || "{color}{env}{mode}:%/%R%#{reset} "
 
       # Determine color based on environment
-      color = if ConfigManager.is_production_environment?(@options.env)
+      color = if LSQL::ConfigManager.is_production_environment?(@options.env)
                 colors['production'] || "\033[0;31m"
               else
                 colors['development'] || "\033[0;32m"
