@@ -6,7 +6,7 @@ require 'fileutils'
 
 RSpec.describe LSQL::ConfigManager do
   let(:test_config_dir) { Dir.mktmpdir('lsql_config_test') }
-  let(:test_config_file) { File.join(test_config_dir, 'config.yml') }
+  let(:test_config_file) { File.join(test_config_dir, 'settings.yml') }
 
   before do
     # Mock the config directory and file paths
@@ -53,9 +53,11 @@ RSpec.describe LSQL::ConfigManager do
     end
 
     context 'when config file does not exist' do
-      it 'returns empty hash' do
+      it 'returns default config' do
         config = described_class.load_config
-        expect(config).to eq({})
+        expect(config).to include('cache', 'groups', 'defaults')
+        expect(config['cache']['prefix']).to eq('db_url')
+        expect(config['cache']['ttl_minutes']).to eq(480)
       end
     end
 
@@ -65,10 +67,10 @@ RSpec.describe LSQL::ConfigManager do
         File.write(test_config_file, 'invalid: yaml: content: [')
       end
 
-      it 'returns empty hash and warns' do
+      it 'returns default config and warns' do
         config = nil
         expect { config = described_class.load_config }.to output(/Warning: Failed to load config file/).to_stdout
-        expect(config).to eq({})
+        expect(config).to include('cache', 'groups', 'defaults')
       end
     end
   end
@@ -123,7 +125,7 @@ RSpec.describe LSQL::ConfigManager do
 
     it 'returns default when no other values provided' do
       result = described_class.get_cache_ttl(nil, nil)
-      expect(result).to eq(600) # 10 minutes * 60 seconds
+      expect(result).to eq(28_800) # 480 minutes * 60 seconds
     end
   end
 
@@ -150,7 +152,7 @@ RSpec.describe LSQL::ConfigManager do
 
     it 'returns default when no other values provided' do
       result = described_class.get_cache_directory(nil, nil)
-      expected_default = File.expand_path(File.join(test_config_dir, 'cache'))
+      expected_default = File.expand_path('~/.lsql/cache')
       expect(result).to eq(expected_default)
     end
 
@@ -215,13 +217,13 @@ RSpec.describe LSQL::ConfigManager do
 
   describe '.create_default_config' do
     it 'creates default config file when it does not exist' do
-      expect { described_class.create_default_config }.to output(/Created default config file/).to_stdout
+      expect { described_class.create_default_config }.to output(/Created user config file/).to_stdout
 
       expect(File.exist?(test_config_file)).to be true
       content = File.read(test_config_file)
-      expect(content).to include('cache:')
-      expect(content).to include('prefix: db_url')
-      expect(content).to include('ttl_minutes: 10')
+      expect(content).to include('# cache:')
+      expect(content).to include('myteam_db_urls')
+      expect(content).to include('ttl_minutes: 30')
       expect(content).to include('directory:')
     end
 
@@ -235,18 +237,18 @@ RSpec.describe LSQL::ConfigManager do
     end
 
     it 'creates directory structure if needed' do
-      expect { described_class.create_default_config }.to output(/Created default config file/).to_stdout
+      expect { described_class.create_default_config }.to output(/Created user config file/).to_stdout
 
       expect(Dir.exist?(test_config_dir)).to be true
       expect(File.exist?(test_config_file)).to be true
     end
 
     it 'includes cache directory in default config' do
-      expect { described_class.create_default_config }.to output(/Created default config file/).to_stdout
+      expect { described_class.create_default_config }.to output(/Created user config file/).to_stdout
 
       content = File.read(test_config_file)
-      expect(content).to include('directory:')
-      expect(content).to include('Directory where encrypted cache files are stored')
+      expect(content).to include('directory: ~/.lsql/cache')
+      expect(content).to include('# groups:')
     end
   end
 
@@ -294,6 +296,49 @@ RSpec.describe LSQL::ConfigManager do
       expect(prefix).to eq('config_prefix')
       expect(ttl).to eq(1800) # 30 minutes * 60
       expect(directory).to eq('/config/cache')
+    end
+  end
+
+  describe 'prompt configuration' do
+    describe '.get_prompt_config' do
+      it 'returns default prompt config when no user config exists' do
+        config = described_class.get_prompt_config
+        expect(config).to include('colors', 'production_patterns', 'templates')
+      end
+    end
+
+    describe '.get_prompt_colors' do
+      it 'returns default colors' do
+        colors = described_class.get_prompt_colors
+        expect(colors['production']).to eq("\u000033[0;31m")
+        expect(colors['development']).to eq("\u000033[0;32m")
+        expect(colors['reset']).to eq("\u000033[0m")
+      end
+    end
+
+    describe '.get_production_patterns' do
+      it 'returns default production patterns' do
+        patterns = described_class.get_production_patterns
+        expect(patterns).to include('^prod', '^production')
+      end
+    end
+
+    describe '.get_prompt_templates' do
+      it 'returns default prompt templates' do
+        templates = described_class.get_prompt_templates
+        expect(templates['colored']).to include('{color}', '{env}', '{mode}', '{reset}')
+        expect(templates['plain']).to include('{space}', '{mode_short}', '{env}', '{mode}')
+      end
+    end
+
+    describe '.is_production_environment?' do
+      it 'detects production environments correctly' do
+        expect(described_class.is_production_environment?('prod01')).to be true
+        expect(described_class.is_production_environment?('production')).to be true
+        expect(described_class.is_production_environment?('PROD-TEST')).to be true
+        expect(described_class.is_production_environment?('staging01')).to be false
+        expect(described_class.is_production_environment?('dev01')).to be false
+      end
     end
   end
 end

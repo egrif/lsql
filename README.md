@@ -53,9 +53,9 @@ lsql --cache-stats
 ## Configuration Priority
 
 1. CLI arguments (highest)
-2. `~/.lsql/config.yml`
-3. Environment variables
-4. Built-in defaults (lowest)
+2. `~/.lsql/settings.yml`
+3. Default settings (built-in)
+4. Environment variables (lowest)
 ## Environment Variables
 
 | Variable           | Description                                      |
@@ -155,7 +155,7 @@ gem install ./lsql-1.1.2.gem
 
 ## Configuration
 
-LSQL uses a unified configuration file at `~/.lsql/config.yml`:
+LSQL uses a unified configuration file at `~/.lsql/settings.yml`:
 
 ```yaml
 # Cache settings
@@ -182,9 +182,9 @@ groups:
 
 ### Configuration Priority
 1. CLI arguments (highest)
-2. `~/.lsql/config.yml`
-3. Environment variables
-4. Built-in defaults (lowest)
+2. `~/.lsql/settings.yml`
+3. Default settings (built-in)
+4. Environment variables (lowest)
 
 For comprehensive usage examples and advanced scenarios, see [USAGE.md](USAGE.md).
 
@@ -194,8 +194,10 @@ For comprehensive usage examples and advanced scenarios, see [USAGE.md](USAGE.md
 |------------------------------|----------------------------------------------------------------------------------------------|
 | `-e ENV`                     | Target environment (required unless using `-g`)                                              |
 | `-g GROUP` / `--group GROUP` | Execute against environment group; use `list` to see available groups                        |
-| `-n` / `--no-agg`            | Disable output aggregation for group operations                                              |
+| `-A` / `--no-agg`            | Disable output aggregation for group operations                                              |
+| `-C` / `--no-color`          | Disable color codes for interactive psql sessions                                            |
 | `-p [THREADS]` / `--parallel [THREADS]` | Enable parallel execution; auto-detect cores or specify count                   |
+| `-P` / `--no-parallel`       | Disable parallel execution for group operations                                              |
 | `-v` / `--verbose`           | Verbose output with detailed progress                                                        |
 | `-q` / `--quiet`             | Quiet mode: suppress execution summary and output headers                                    |
 | `-o [FILE]`                  | Output file (auto-generated if no filename provided)                                         |

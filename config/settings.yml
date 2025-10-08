@@ -1,0 +1,108 @@
+# LSQL Default Settings
+# This file contains the default configuration for LSQL
+# User settings in ~/.lsql/settings.yml will override these defaults
+
+cache:
+  # Default cache key prefix
+  prefix: db_url
+  
+  # Default cache TTL in minutes
+  ttl_minutes: 480
+  
+  # Default cache directory (will be set relative to user's home)
+  directory: ~/.lsql/cache
+
+# Default environment groups
+groups:
+  staging:
+    description: Staging environments
+    environments:
+      - staging
+      - staging-s2
+      - staging-s101
+      - staging-s201
+
+  all-prod:
+    description: All production environments
+    environments:
+      - prod
+      - prod-s2
+      - prod-s3
+      - prod-s4
+      - prod-s5
+      - prod-s6
+      - prod-s7
+      - prod-s8
+      - prod-s9
+      - prod-s101
+      - prod-s201
+
+  us-prod:
+    description: All US production environments
+    environments:
+      - prod
+      - prod-s2
+      - prod-s3
+      - prod-s4
+      - prod-s5
+      - prod-s6
+      - prod-s7
+      - prod-s8
+      - prod-s9
+
+  eu-prod:
+    description: All EU production environments
+    environments:
+      - prod-s101
+
+  apse-prod:
+    description: All AP Southeast production environments
+    environments:
+      - prod-s201
+
+  us-staging:
+    description: All US staging environments
+    environments:
+      - staging
+      - staging-s2
+
+  eu-staging:
+    description: All EU staging environments
+    environments:
+      - staging-s101
+
+  apse-staging:
+    description: All AP Southeast staging environments
+    environments:
+      - staging-s201
+
+# Prompt configuration for interactive sessions
+prompts:
+  # Color codes for different environment types
+  colors:
+    production: "\033[0;31m"    # Red for production environments
+    development: "\033[0;32m"   # Green for development/staging environments
+    reset: "\033[0m"           # Reset color
+
+  # Environment patterns to determine color scheme
+  # Environments matching these patterns will use production colors (red)
+  production_patterns:
+    - "^prod"
+    - "^production"
+  
+  # Default prompt templates
+  templates:
+    # Colored prompt template (when --no-color is not used)
+    # Available variables: {env}, {mode}, {color}, {reset}
+    colored: "{color}{env}{mode}:%/%R%#{reset} "
+    
+    # No-color prompt template (when --no-color is used)
+    # Available variables: {env}, {mode}, {space}, {mode_short}
+    plain: "{space}:{mode_short} > {env}{mode}:%/%R%# "
+
+# Default settings for new installations
+defaults:
+  space: prod
+  region: use1
+  application: greenhouse
+  mode: rw

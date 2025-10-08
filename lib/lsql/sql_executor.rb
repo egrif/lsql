@@ -2,16 +2,11 @@
 
 require 'fileutils'
 require 'open3'
+require_relative 'config_manager'
 
 module Lsql
   # Handles SQL execution (interactive, file, command)
   class SqlExecutor
-    COLORS = {
-      red: "\033[0;31m",
-      green: "\033[0;32m",
-      reset: "\033[0m"
-    }.freeze
-
     def initialize(options, output_manager, database_connector)
       @options = options
       @output_manager = output_manager
@@ -43,40 +38,72 @@ module Lsql
       hostname = @database_connector.extract_hostname(database_url)
       puts "Connecting to: #{hostname}"
 
-      # Construct the base prompt
-      if @options.no_color
-        # No color version - strip ANSI codes from the original prompt and add prefix
-        base_prompt = "#{@options.env}#{@database_connector.mode_display}:%/%R%# "
-
-        # Create the prefix with space and mode
-        space_display = (@options.space || 'UNKNOWN').upcase
-        mode_display = if @database_connector.mode_display.empty?
-                         'RW'
-                       else
-                         # Extract mode from [RO-PRIMARY] -> R1, [RO-SECONDARY] -> R2, etc.
-                         case @database_connector.mode_display
-                         when '[RO-PRIMARY]'
-                           'R1'
-                         when '[RO-SECONDARY]'
-                           'R2'
-                         when '[RO-TERTIARY]'
-                           'R3'
-                         else
-                           @database_connector.mode_display.gsub(/[\[\]]/, '').upcase
-                         end
-                       end
-
-        # Prefix the original prompt with SPACE:MODE >
-        psql_prompt = "#{space_display}:#{mode_display} > #{base_prompt}"
-      else
-        # Colored version with ANSI codes
-        prompt_color = @options.env =~ /^prod/i ? COLORS[:red] : COLORS[:green]
-        reset_color = COLORS[:reset]
-        psql_prompt = "#{prompt_color}#{@options.env}#{@database_connector.mode_display}:%/%R%##{reset_color} "
-      end
+      # Construct the prompt using configuration
+      psql_prompt = build_prompt
 
       # Pass the custom prompt directly to psql
       system("psql \"#{database_url}\" --set=PROMPT1=\"#{psql_prompt}\" --set=PROMPT2=\"#{psql_prompt}\"")
+    end
+
+    def build_prompt
+      if @options.no_color
+        build_plain_prompt
+      else
+        build_colored_prompt
+      end
+    end
+
+    def build_plain_prompt
+      templates = ConfigManager.get_prompt_templates
+      template = templates['plain'] || '{space}:{mode_short} > {env}{mode}:%/%R%# '
+
+      # Create variables for substitution
+      space_display = (@options.space || 'UNKNOWN').upcase
+      mode_short = get_mode_short_display
+
+      # Substitute variables in template
+      template.gsub('{space}', space_display)
+              .gsub('{mode_short}', mode_short)
+              .gsub('{env}', @options.env.to_s)
+              .gsub('{mode}', @database_connector.mode_display.to_s)
+    end
+
+    def build_colored_prompt
+      templates = ConfigManager.get_prompt_templates
+      colors = ConfigManager.get_prompt_colors
+      template = templates['colored'] || "{color}{env}{mode}:%/%R%#{reset} "
+
+      # Determine color based on environment
+      color = if ConfigManager.is_production_environment?(@options.env)
+                colors['production'] || "\033[0;31m"
+              else
+                colors['development'] || "\033[0;32m"
+              end
+      reset = colors['reset'] || "\033[0m"
+
+      # Substitute variables in template
+      template.gsub('{color}', color)
+              .gsub('{reset}', reset)
+              .gsub('{env}', @options.env.to_s)
+              .gsub('{mode}', @database_connector.mode_display.to_s)
+    end
+
+    def get_mode_short_display
+      if @database_connector.mode_display.empty?
+        'RW'
+      else
+        # Extract mode from [RO-PRIMARY] -> R1, [RO-SECONDARY] -> R2, etc.
+        case @database_connector.mode_display
+        when '[RO-PRIMARY]'
+          'R1'
+        when '[RO-SECONDARY]'
+          'R2'
+        when '[RO-TERTIARY]'
+          'R3'
+        else
+          @database_connector.mode_display.gsub(/[\[\]]/, '').upcase
+        end
+      end
     end
 
     def run_sql_file(database_url, options)

@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3] - 2025-10-08
+
+### Added
+- **Configurable Prompts**: Added comprehensive prompt configuration system
+  - Configurable color schemes for production (red) and development (green) environments
+  - Customizable prompt templates with variable substitution (`{color}`, `{env}`, `{mode}`, `{reset}`, etc.)
+  - Smart environment detection based on configurable patterns
+  - Full backward compatibility with existing `--no-color` functionality
+
+### Changed
+- **Configuration System**: Enhanced settings management
+  - Changed configuration file extension from `.yaml` to `.yml` for consistency
+  - Unified configuration system with default settings merging
+  - Removed legacy `.lsql_groups.yml` file in favor of unified `~/.lsql/settings.yml`
+
+### Fixed
+- **Documentation**: Corrected command-line option references
+  - Fixed incorrect `-n` flag references to correct `-A` for `--no-agg` option
+  - Added missing `--no-color` (`-C`) and `--no-parallel` (`-P`) options to documentation
+  - Updated all usage examples to use correct flag syntax
+
+### Improved
+- **User Experience**: Enhanced configuration template
+  - Added comprehensive commented examples for all configuration options
+  - Improved user configuration file with prompt customization examples
+  - Better error messages and help text consistency
+
 ## [1.5.2] - 2025-10-07
 
 ### Fixed

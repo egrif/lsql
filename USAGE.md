@@ -30,6 +30,9 @@ lsql -e dev01
 # Connect to production with color-coded prompt
 lsql -e prod01
 
+# Connect without color codes (for scripts or terminals without color support)
+lsql -e prod01 -C
+
 # Connect to specific region and application
 lsql -e dev01 -r euc1 -a myapp
 ```
@@ -112,7 +115,7 @@ lsql "SELECT count(*) FROM products" -g staging -v
 lsql "SELECT count(*) FROM users" -g staging -q
 
 # No aggregation (separate results per environment)  
-lsql "SELECT * FROM system_status" -g staging -n
+lsql "SELECT * FROM system_status" -g staging -A
 
 # Group execution with output file
 lsql "SELECT * FROM user_analytics" -g production -o analytics.txt
@@ -138,6 +141,21 @@ lsql "SELECT count(*) FROM orders" -g production -p 4
 
 # Use 8 threads for large operations
 lsql "SELECT * FROM analytics_data" -g all-environments -p 8
+```
+
+### Disabling Parallel Execution
+
+Force sequential execution instead of default parallel execution:
+
+```bash
+# Disable parallel execution
+lsql "SELECT * FROM sensitive_data" -g staging -P
+
+# Disable parallel with verbose output
+lsql "SELECT count(*) FROM users" -g production -P -v
+```
+
+### Parallel with Other Options
 
 # Conservative threading for sensitive operations
 lsql "SELECT count(*) FROM financial_data" -g production -p 2
@@ -153,7 +171,7 @@ lsql "SELECT count(*) FROM users" -g staging -p 4 -q
 lsql "SELECT * FROM large_dataset" -g production -p 6 -v
 
 # Parallel + no aggregation + output files
-lsql report.sql -g staging -p 4 -n -o results
+lsql report.sql -g staging -p 4 -A -o results
 
 # Parallel + specific output format
 lsql "SELECT id, name FROM users" -g staging -p -f csv -o users.csv
@@ -246,8 +264,8 @@ lsql "SELECT * FROM users" -g staging -o
 # Single aggregated output file
 lsql "SELECT count(*) FROM orders" -g production -o order_counts.txt
 
-# Environment-specific output files (with -n flag)
-lsql "SELECT * FROM logs" -g staging -n -o logs
+# Environment-specific output files (with -A flag)
+lsql "SELECT * FROM logs" -g staging -A -o logs
 # Results in: logs_staging.txt, logs_staging-s2.txt, etc.
 ```
 
@@ -255,7 +273,7 @@ lsql "SELECT * FROM logs" -g staging -n -o logs
 
 ```bash
 # JSON export for each environment
-lsql "SELECT * FROM user_data" -g staging -n -f json -o user_data
+lsql "SELECT * FROM user_data" -g staging -A -f json -o user_data
 # Results in: user_data_staging.json, user_data_staging-s2.json
 
 # CSV export aggregated
@@ -435,7 +453,7 @@ Example output:
 ============================================================
 LSQL CONFIGURATION
 ============================================================
-Configuration File: /Users/username/.lsql/config.yml
+Configuration File: /Users/username/.lsql/settings.yml
 
 Cache Settings:
   Prefix: myteam (from config file)
@@ -459,7 +477,7 @@ lsql --init-config
 
 # Initialize and then customize
 lsql --init-config
-# Edit ~/.lsql/config.yml with your preferences
+# Edit ~/.lsql/settings.yml with your preferences
 lsql --show-config  # Verify changes
 ```
 

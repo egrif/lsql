@@ -6,7 +6,8 @@ require 'fileutils'
 module LSQL
   class ConfigManager
     CONFIG_DIR = File.expand_path('~/.lsql')
-    CONFIG_FILE = File.join(CONFIG_DIR, 'config.yml')
+    CONFIG_FILE = File.join(CONFIG_DIR, 'settings.yml')
+    DEFAULT_CONFIG_FILE = File.join(File.dirname(__FILE__), '..', '..', 'config', 'settings.yml')
 
     DEFAULT_CONFIG = {
       'cache' => {
@@ -53,15 +54,49 @@ module LSQL
     }.freeze
 
     def self.load_config
-      if File.exist?(CONFIG_FILE)
+      # Load default configuration first
+      default_config = load_default_config
+
+      # Load user configuration if it exists
+      user_config = if File.exist?(CONFIG_FILE)
+                      begin
+                        YAML.load_file(CONFIG_FILE) || {}
+                      rescue StandardError => e
+                        puts "Warning: Failed to load config file #{CONFIG_FILE}: #{e.message}"
+                        {}
+                      end
+                    else
+                      {}
+                    end
+
+      # Merge configurations with user settings taking precedence
+      deep_merge(default_config, user_config)
+    end
+
+    def self.load_default_config
+      if File.exist?(DEFAULT_CONFIG_FILE)
         begin
-          YAML.load_file(CONFIG_FILE) || {}
+          config = YAML.load_file(DEFAULT_CONFIG_FILE) || {}
+          # Expand cache directory path relative to user's home
+          config['cache']['directory'] = File.expand_path(config['cache']['directory']) if config.dig('cache', 'directory')
+          config
         rescue StandardError => e
-          puts "Warning: Failed to load config file #{CONFIG_FILE}: #{e.message}"
-          {}
+          puts "Warning: Failed to load default config file #{DEFAULT_CONFIG_FILE}: #{e.message}"
+          DEFAULT_CONFIG
         end
       else
-        {}
+        # Fallback to hardcoded defaults if default config file doesn't exist
+        DEFAULT_CONFIG
+      end
+    end
+
+    def self.deep_merge(default_hash, override_hash)
+      default_hash.merge(override_hash) do |_key, default_val, override_val|
+        if default_val.is_a?(Hash) && override_val.is_a?(Hash)
+          deep_merge(default_val, override_val)
+        else
+          override_val
+        end
       end
     end
 
@@ -136,103 +171,41 @@ module LSQL
       FileUtils.mkdir_p(CONFIG_DIR)
 
       config_content = <<~YAML
-        # LSQL Configuration File
-        # This file contains settings and group definitions for the LSQL command-line tool
+        # LSQL User Configuration File
+        # This file overrides the default settings in config/settings.yml
+        # Only include settings you want to customize
 
-        cache:
-          # Cache key prefix (default: db_url)
-          # Cache keys use format: lsql:{prefix}:{space}_{env}_{region}_{app}
-          prefix: db_url
-        #{'  '}
-          # Cache TTL in minutes (default: 10)
-          # How long database URLs are cached before requiring fresh lookup
-          ttl_minutes: 10
-        #{'  '}
-          # Cache directory for filesystem cache (default: ~/.lsql/cache)
-          # Directory where encrypted cache files are stored
-          directory: #{File.join(CONFIG_DIR, 'cache')}
-
-        # Environment groups for batch operations
-        groups:
-          staging:
-            description: Staging environments
-            environments:
-              - staging
-              - staging-s2
-              - staging-s3
-              - staging-s101
-              - staging-s201
-        #{'  '}
-          all-prod:
-            description: All production environments
-            environments:
-              - prod
-              - prod-s2
-              - prod-s3
-              - prod-s4
-              - prod-s5
-              - prod-s6
-              - prod-s7
-              - prod-s8
-              - prod-s9
-              - prod-s101
-              - prod-s201
-        #{'  '}
-          us-prod:
-            description: All US production environments
-            environments:
-              - prod
-              - prod-s2
-              - prod-s3
-              - prod-s4
-              - prod-s5
-              - prod-s6
-              - prod-s7
-              - prod-s8
-              - prod-s9
-        #{'  '}
-          eu-prod:
-            description: All EU production environments
-            environments:
-              - prod-s101
-        #{'  '}
-          apse-prod:
-            description: All AP Southeast production environments
-            environments:
-              - prod-s201
-        #{'  '}
-          us-staging:
-            description: All US staging environments
-            environments:
-              - staging
-              - staging-s2
-              - staging-s3
-        #{'  '}
-          eu-staging:
-            description: All EU staging environments
-            environments:
-              - staging-s101
-        #{'  '}
-          apse-staging:
-            description: All AP Southeast staging environments
-            environments:
-              - staging-s201
-
-        # Example custom configuration:
+        # Uncomment and customize cache settings as needed:
         # cache:
         #   prefix: myteam_db_urls
         #   ttl_minutes: 30
-        ##{' '}
+        #   directory: ~/.lsql/cache
+
+        # Uncomment and add custom environment groups:
         # groups:
         #   my-custom-group:
         #     description: My custom environments
         #     environments:
         #       - env1
         #       - env2
+
+        # Uncomment and customize prompt settings:
+        # prompts:
+        #   colors:
+        #     production: "\\033[0;31m"     # Red for production
+        #     development: "\\033[0;33m"    # Yellow for development
+        #   production_patterns:
+        #     - "^prod"
+        #     - "^live"
+        #   templates:
+        #     colored: "{color}{env}{mode}:%/%R%\\#\\{reset\\} "
+        #     plain: "{space}:{mode_short} > {env}{mode}:%/%R%# "
       YAML
 
       File.write(CONFIG_FILE, config_content)
-      puts "Created default config file: #{CONFIG_FILE}"
+      puts "Created user config file: #{CONFIG_FILE}"
+      puts 'Default settings are loaded from the built-in configuration.'
+      puts 'Edit this file to customize cache settings and add custom groups.'
     end
 
     def self.show_config(cli_prefix = nil, cli_ttl = nil)
@@ -313,6 +286,31 @@ module LSQL
         environments = group_config['environments'] || []
         puts "  - #{name} (#{environments.length} environments)"
       end
+    end
+
+    def self.get_prompt_config
+      config = load_config
+      config['prompts'] || DEFAULT_CONFIG['prompts']
+    end
+
+    def self.get_prompt_colors
+      prompt_config = get_prompt_config
+      prompt_config['colors'] || {}
+    end
+
+    def self.get_production_patterns
+      prompt_config = get_prompt_config
+      prompt_config['production_patterns'] || []
+    end
+
+    def self.get_prompt_templates
+      prompt_config = get_prompt_config
+      prompt_config['templates'] || {}
+    end
+
+    def self.is_production_environment?(env_name)
+      patterns = get_production_patterns
+      patterns.any? { |pattern| env_name =~ Regexp.new(pattern, Regexp::IGNORECASE) }
     end
   end
 end

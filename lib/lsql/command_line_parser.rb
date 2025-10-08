@@ -32,7 +32,6 @@ module Lsql
       )
     end
 
-    # rubocop:disable Metrics/MethodLength
     def parse(args)
       # First check if the first argument is an SQL command
       @options.sql_command = args.shift if args.first && !args.first.start_with?('-')
@@ -182,8 +181,8 @@ module Lsql
         opts.separator '  https://github.com/egrif/lsql/blob/main/USAGE.md'
         opts.separator ''
         opts.separator 'Configuration:'
-        opts.separator '  File: ~/.lsql/config.yml'
-        opts.separator '  Priority: CLI args > config file > env vars > defaults'
+        opts.separator '  File: ~/.lsql/settings.yml'
+        opts.separator '  Priority: CLI args > user settings > defaults > env vars'
         opts.separator '  Environment variables: LSQL_CACHE_PREFIX, LSQL_CACHE_TTL, LSQL_CACHE_DIR, LSQL_CACHE_KEY'
       end
 
@@ -212,6 +211,5 @@ module Lsql
 
       @options
     end
-    # rubocop:enable Metrics/MethodLength
   end
 end
