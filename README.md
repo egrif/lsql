@@ -143,12 +143,21 @@ gem install ./lsql-1.1.2.gem
    lsql "SELECT count(*) FROM users" -e dev01
    ```
 
-4. **Run Query on Group with Parallel Execution**:
+4. **Run Query on Multiple Environments (À La Carte)**:
+   ```bash
+   # Multiple environments with custom space/region
+   lsql "SELECT count(*) FROM users" -e "prod01:prod:use1,dev02:dev:euc1,staging03"
+   
+   # Use CLI flags as defaults for unspecified values
+   lsql "SELECT count(*) FROM users" -e "prod01,dev02:dev,staging03" -s prod -r use1
+   ```
+
+5. **Run Query on Group with Parallel Execution**:
    ```bash
    lsql "SELECT count(*) FROM users" -g staging -p 4
    ```
 
-5. **Get Clean Results for Automation**:
+6. **Get Clean Results for Automation**:
    ```bash
    lsql "SELECT count(*) FROM orders" -g staging -q
    ```
@@ -192,7 +201,7 @@ For comprehensive usage examples and advanced scenarios, see [USAGE.md](USAGE.md
 
 | Option / Flag                | Description                                                                                  |
 |------------------------------|----------------------------------------------------------------------------------------------|
-| `-e ENV`                     | Target environment (required unless using `-g`)                                              |
+| `-e ENV`                     | Target environment(s): single (`prod01`) or multiple (`prod01:prod:use1,dev02:dev:euc1`)    |
 | `-g GROUP` / `--group GROUP` | Execute against environment group; use `list` to see available groups                        |
 | `-A` / `--no-agg`            | Disable output aggregation for group operations                                              |
 | `-C` / `--no-color`          | Disable color codes for interactive psql sessions                                            |

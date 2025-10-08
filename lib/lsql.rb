@@ -85,19 +85,78 @@ module Lsql
         return
       end
 
-      # Setup environment
-      EnvironmentManager.new(options)
+      # Setup environment manager (handles both single and multiple environments)
+      env_manager = EnvironmentManager.new(options)
+
+      # Check if we have multiple environments (à la carte)
+      if env_manager.multiple_environments?
+        # Prevent interactive sessions with multiple environments
+        if options.sql_command.nil?
+          puts 'Error: Interactive sessions are not supported with multiple environments.'
+          puts 'Please provide an SQL command or file to execute.'
+          return
+        end
+
+        puts "Executing across #{env_manager.environments.length} environments..."
+
+        # Use GroupHandler's execution logic for multiple environments
+        group_handler = GroupHandler.new(options)
+
+        # Create aggregator for output collection (unless disabled)
+        aggregator = options.no_agg ? nil : OutputAggregator.new(options)
+        original_output_file = options.output_file
+
+        # Execute using GroupHandler's existing parallel/sequential logic
+        if env_manager.environments.length == 1 || options.parallel == false
+          group_handler.send(:execute_environments_sequential, env_manager.environments, aggregator)
+        else
+          group_handler.send(:execute_environments_parallel, env_manager.environments, aggregator)
+        end
+
+        # Display aggregated output (same logic as in GroupHandler)
+        display_aggregated_output(aggregator, original_output_file, options) if aggregator
+        return
+      end
+
+      # Use the primary (and only) environment options
+      primary_options = env_manager.primary_environment
 
       # Setup output file if needed
-      output_manager = OutputFileManager.new(options)
+      output_manager = OutputFileManager.new(primary_options)
 
       # Setup database connection
-      db_connector = DatabaseConnector.new(options)
+      db_connector = DatabaseConnector.new(primary_options)
       database_url = db_connector.get_database_url
 
       # Execute SQL
-      executor = SqlExecutor.new(options, output_manager, db_connector)
+      executor = SqlExecutor.new(primary_options, output_manager, db_connector)
       executor.execute(database_url)
+    end
+
+    private
+
+    def display_aggregated_output(aggregator, original_output_file, options)
+      if original_output_file
+        # When outputting to a file, don't display aggregated results to stdout
+        # Just aggregate to the file and show the file path
+        aggregator.aggregate_output(original_output_file)
+        puts "\n#{'=' * 60}"
+        puts 'OUTPUT WRITTEN TO FILE'
+        puts '=' * 60
+        puts "File: #{original_output_file}"
+      else
+        # When no output file specified, display aggregated results to stdout
+        display_aggregated_header(options)
+        aggregator.aggregate_output(original_output_file)
+      end
+    end
+
+    def display_aggregated_header(options)
+      return if options.quiet
+
+      puts "\n#{'=' * 60}"
+      puts 'AGGREGATED OUTPUT'
+      puts '=' * 60
     end
   end
 end

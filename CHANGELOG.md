@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2025-10-08
+
+### Added
+- **À La Carte Multiple Environments**: Execute SQL against multiple environments with custom configurations
+  - Format: `ENV[:SPACE[:REGION]]` for per-environment space/region overrides
+  - Example: `lsql "SELECT count(*) FROM users" -e "prod01:prod:use1,dev02:dev:euc1,staging03"`
+  - Intelligent precedence system for space/region defaults
+  - Full integration with existing parallel execution and output aggregation
+
+### Enhanced
+- **Environment Manager**: Completely refactored to handle both single and multiple environments
+  - Support for precedence-based configuration resolution
+  - Per-environment space and region overrides
+  - Backward compatibility with existing single environment usage
+- **Group Handler**: Updated to work seamlessly with pre-configured environment options
+- **Output Aggregation**: Enhanced to properly display results from multiple environments
+- **Documentation**: Comprehensive updates to README.md and USAGE.md with examples and precedence rules
+
+### Fixed
+- **Multiple Environment Output**: Resolved issue where multiple environment execution showed no output
+- **OpenStruct Compatibility**: Fixed `undefined method 'include?'` error when executing across multiple environments
+
 ## [1.5.3] - 2025-10-08
 
 ### Added
