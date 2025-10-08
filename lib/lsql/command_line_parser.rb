@@ -48,7 +48,10 @@ module Lsql
         opts.separator ''
         opts.separator 'Options:'
 
-        opts.on('-e ENV', 'Environment (required unless using -g)') do |env|
+        opts.on('-e ENV', 'Environment (required unless using -g)',
+                '  Single: prod01',
+                '  Multiple: prod01:prod:use1,dev01:dev:euc1',
+                '  Format: ENV[:SPACE[:REGION]] - omitted values use -s/-r flags or defaults') do |env|
           @options.env = env
         end
 
@@ -210,6 +213,30 @@ module Lsql
       end
 
       @options
+    end
+
+    def self.parse_environments(env_string, fallback_space = nil, fallback_region = nil)
+      # Split by comma to get individual environment specifications
+      env_specs = env_string.split(',').map(&:strip)
+
+      env_specs.map do |env_spec|
+        parts = env_spec.split(':')
+
+        env_name = parts[0]
+        # Handle empty strings as nil for fallback logic
+        space = parts[1].nil? || parts[1].empty? ? fallback_space : parts[1]
+        region = parts[2].nil? || parts[2].empty? ? fallback_region : parts[2]
+
+        {
+          env: env_name,
+          space: space,
+          region: region
+        }
+      end
+    end
+
+    def self.multiple_environments?(env_string)
+      !env_string.nil? && env_string.include?(',')
     end
   end
 end
