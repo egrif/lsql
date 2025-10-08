@@ -105,7 +105,7 @@ module Lsql
       environments.each_with_index do |env_options, index|
         # env_options is already a full options object with environment-specific settings
         env_name = env_options.env
-        
+
         if @options.verbose
           puts "
 [#{index + 1}/#{environments.length}] Processing environment: #{env_name}"
