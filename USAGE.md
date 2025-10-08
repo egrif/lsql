@@ -77,6 +77,78 @@ lsql complex_analysis.sql -e prod01 -o analysis_results.txt
 lsql report.sql -e staging -r use1 -a greenhouse -o report.csv
 ```
 
+## Multiple Environments (À La Carte)
+
+Execute commands against multiple specific environments with custom configurations:
+
+### Basic Multiple Environment Usage
+
+```bash
+# Simple multiple environments
+lsql "SELECT count(*) FROM users" -e "prod01,dev02,staging03"
+
+# With custom space and region per environment  
+lsql "SELECT * FROM system_status" -e "prod01:prod:use1,dev02:dev:euc1,staging03:prod:apse2"
+
+# Mix of specified and default configurations
+lsql "SELECT count(*) FROM orders" -e "prod01:prod,dev02,staging03:prod" -s dev -r use1
+```
+
+### Format Specification
+
+Environment specification format: `ENV[:SPACE[:REGION]]`
+
+- **ENV** (required): Environment name
+- **SPACE** (optional): Environment space (`prod`, `dev`, etc.)
+- **REGION** (optional): Environment region (`use1`, `euc1`, `apse2`)
+
+### Precedence Rules
+
+When space or region are omitted, values are determined by:
+
+1. **Per-environment specification**: `prod01:prod:use1`  
+2. **CLI flags**: `-s prod -r use1`
+3. **Environment-based defaults**: 
+   - Space: `prod` for prod/staging environments, `dev` for others
+   - Region: `apse2` for 2XX environments, `euc1` for 1XX, `use1` for others
+4. **Config file defaults**
+
+### Examples with Defaults
+
+```bash
+# Using CLI flags as defaults for unspecified values
+lsql "SELECT count(*) FROM users" -e "prod01,dev02:dev,staging03" -s prod -r euc1
+# Result:
+#   prod01 -> space: prod, region: euc1 (from CLI)  
+#   dev02 -> space: dev, region: euc1 (dev specified, region from CLI)
+#   staging03 -> space: prod, region: euc1 (from CLI)
+
+# Environment-based defaults when no CLI flags provided
+lsql "SELECT * FROM logs" -e "prod01,dev99,staging-s101"
+# Result:
+#   prod01 -> space: prod, region: use1 (prod env defaults)
+#   dev99 -> space: dev, region: use1 (non-prod env defaults)  
+#   staging-s101 -> space: prod, region: euc1 (staging env, 1XX region)
+```
+
+### Parallel Execution and Aggregation
+
+Multiple environments support the same options as groups:
+
+```bash
+# Parallel execution with multiple environments
+lsql "SELECT count(*) FROM users" -e "prod01,prod02,prod03" -p 3
+
+# Disable output aggregation  
+lsql "SELECT * FROM system_info" -e "prod01:prod:use1,dev02:dev:euc1" -A
+
+# Quiet mode for automation
+lsql "SELECT count(*) FROM orders" -e "prod01,dev02" -q
+
+# Output to files
+lsql report.sql -e "prod01,staging02" -o results -A  # Creates separate files per environment
+```
+
 ## Environment Groups
 
 ### Listing Groups

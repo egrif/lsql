@@ -102,20 +102,19 @@ module Lsql
       end
 
       results = []
-      environments.each_with_index do |env, index|
+      environments.each_with_index do |env_options, index|
+        # env_options is already a full options object with environment-specific settings
+        env_name = env_options.env
+        
         if @options.verbose
           puts "
-[#{index + 1}/#{environments.length}] Processing environment: #{env}"
+[#{index + 1}/#{environments.length}] Processing environment: #{env_name}"
           puts '-' * 40
         elsif !@options.no_agg
           # Show dot at the beginning of each query and start spinner
           print '.'
           $stdout.flush
         end
-
-        # Create a copy of options with the current environment
-        env_options = @options.dup
-        env_options.env = env
 
         # Start spinner for non-verbose aggregated mode
         spinner_thread = nil
@@ -134,7 +133,7 @@ module Lsql
 
         begin
           result = execute_for_environment(env_options, aggregator)
-          results << { env: env, success: result }
+          results << { env: env_name, success: result }
 
           # Stop spinner and show completion
           if !@options.verbose && !@options.no_agg && spinner_thread
@@ -143,7 +142,7 @@ module Lsql
             print "\b "
             $stdout.flush
           elsif @options.verbose
-            puts "✓ Completed environment: #{env}"
+            puts "✓ Completed environment: #{env_name}"
           end
         rescue StandardError => e
           # Stop spinner on error
@@ -153,9 +152,9 @@ module Lsql
             print "\b✗"
             $stdout.flush
           elsif @options.verbose
-            puts "✗ Failed environment: #{env} - #{e.message}"
+            puts "✗ Failed environment: #{env_name} - #{e.message}"
           end
-          results << { env: env, success: false, error: e.message }
+          results << { env: env_name, success: false, error: e.message }
         end
       end
 
@@ -201,26 +200,26 @@ module Lsql
       end
 
       # Submit all tasks to the thread pool
-      futures = environments.map do |env|
+      futures = environments.map do |env_options|
         Concurrent::Future.execute(executor: pool) do
-          env_options = @options.dup
-          env_options.env = env
+          # env_options is already a full options object with environment-specific settings
+          env_name = env_options.env
 
-          puts "[PARALLEL] Starting environment: #{env}" if @options.verbose
+          puts "[PARALLEL] Starting environment: #{env_name}" if @options.verbose
 
           begin
             result = execute_for_environment(env_options, aggregator)
             completed.increment
 
-            puts "[PARALLEL] ✓ Completed environment: #{env}" if @options.verbose
+            puts "[PARALLEL] ✓ Completed environment: #{env_name}" if @options.verbose
 
-            { env: env, success: result }
+            { env: env_name, success: result }
           rescue StandardError => e
             completed.increment
 
-            puts "[PARALLEL] ✗ Failed environment: #{env} - #{e.message}" if @options.verbose
+            puts "[PARALLEL] ✗ Failed environment: #{env_name} - #{e.message}" if @options.verbose
 
-            { env: env, success: false, error: e.message }
+            { env: env_name, success: false, error: e.message }
           end
         end
       end
@@ -291,8 +290,7 @@ module Lsql
     end
 
     def execute_for_environment(env_options, aggregator = nil)
-      # Setup environment
-      EnvironmentManager.new(env_options)
+      # env_options already has environment-specific settings configured
 
       # Setup output file if needed (modify filename to include environment or use aggregator)
       if aggregator
