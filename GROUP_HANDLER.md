@@ -139,9 +139,7 @@ lsql "SELECT current_timestamp" -g staging -p -q
 
 ## Configuration File
 
-Groups are defined in a YAML configuration file named `.lsql_groups.yml`. The tool will search for this file starting from the current directory and moving up the directory tree until it finds one or reaches the root.
-
-If no configuration file is found, a sample configuration will be created automatically.
+Groups are defined in the unified configuration file `~/.lsql/settings.yml`. If no configuration file is found, you can create one using `lsql --init-config` which will set up a sample configuration with default groups.
 
 ### Configuration Format
 

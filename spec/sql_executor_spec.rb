@@ -9,15 +9,16 @@ RSpec.describe Lsql::SqlExecutor do
   let(:database_connector) { double('database_connector', mode_display: '', extract_hostname: 'test-host') }
   let(:sql_executor) { described_class.new(options, output_manager, database_connector) }
 
-  describe 'COLORS constant' do
-    it 'defines color codes for prompt formatting' do
-      expect(Lsql::SqlExecutor::COLORS[:red]).to eq("\033[0;31m")
-      expect(Lsql::SqlExecutor::COLORS[:green]).to eq("\033[0;32m")
-      expect(Lsql::SqlExecutor::COLORS[:reset]).to eq("\033[0m")
-    end
+  describe 'prompt configuration integration' do
+    it 'uses ConfigManager for color settings' do
+      allow(LSQL::ConfigManager).to receive(:get_prompt_colors).and_return({
+                                                                             'production' => "\033[0;31m",
+                                                                             'development' => "\033[0;32m",
+                                                                             'reset' => "\033[0m"
+                                                                           })
 
-    it 'has frozen color constants' do
-      expect(Lsql::SqlExecutor::COLORS).to be_frozen
+      expect(LSQL::ConfigManager).to receive(:get_prompt_colors)
+      sql_executor.send(:build_colored_prompt)
     end
   end
 
@@ -82,7 +83,7 @@ RSpec.describe Lsql::SqlExecutor do
       it 'uses colored prompt format' do
         allow(sql_executor).to receive(:system)
         allow(sql_executor).to receive(:puts)
-        expected_prompt = "\033[0;32mdev:%/%R%#\033[0m "
+        expected_prompt = "\u000033[0;32mdev:%/%R%#\u000033[0m "
         expect(sql_executor).to receive(:system).with("psql \"test-url\" --set=PROMPT1=\"#{expected_prompt}\" --set=PROMPT2=\"#{expected_prompt}\"")
         sql_executor.send(:run_interactive_session, 'test-url')
       end

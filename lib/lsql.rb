@@ -33,7 +33,7 @@ module Lsql
 
       if options.init_config
         LSQL::ConfigManager.create_default_config
-        puts "Configuration file created at #{LSQL::ConfigManager::CONFIG_FILE}"
+        puts "Configuration file created at #{LSQL::ConfigManager.config_file_path}"
         puts 'Edit this file to customize your cache settings.'
         return
       end

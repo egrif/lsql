@@ -1,0 +1,333 @@
+# LSQL - LLM Code Assistant Instructions
+
+This file contains guidelines and rules for LLM code assistants working on the LSQL project.
+
+## Project Overview
+
+LSQL is a Ruby command-line tool for executing SQL queries across multiple Lotus environments with support for parallel execution, intelligent caching, and group operations.
+
+### Key Technologies
+- **Language**: Ruby 2.7+ 
+- **CLI Framework**: OptionParser
+- **Testing**: RSpec
+- **Linting**: RuboCop
+- **Caching**: Redis + AES-256-GCM encrypted filesystem cache
+- **Concurrency**: Ruby's Concurrent gem
+- **Database**: PostgreSQL via `psql` CLI
+
+## Architecture Principles
+
+### Modular Design
+- Each class has a single, well-defined responsibility
+- Clear separation between parsing, execution, caching, and output
+- Dependency injection for better testability
+
+### Core Components
+- `CommandLineParser`: Argument parsing and validation
+- `ConfigManager`: Configuration management and environment groups  
+- `DatabaseConnector`: Database URL retrieval and caching
+- `SqlExecutor`: SQL execution in various modes
+- `GroupHandler`: Parallel execution orchestration
+- `OutputAggregator`: Output formatting and aggregation
+- `CacheManager`: Intelligent caching with encryption
+
+### Key Design Patterns
+- **Strategy Pattern**: Multiple output formats (table, CSV, JSON, YAML)
+- **Command Pattern**: SQL execution modes (interactive, file, command)
+- **Observer Pattern**: Progress tracking and verbose output
+- **Factory Pattern**: Cache backend selection (Redis vs filesystem)
+
+## Coding Standards
+
+### Ruby Style Guide
+- Follow RuboCop configuration in `.rubocop.yml`
+- Use `frozen_string_literal: true` in all files
+- Prefer explicit returns for clarity
+- Use descriptive variable and method names
+
+### Method Guidelines
+- Keep methods under 15 lines when possible
+- Use guard clauses to reduce nesting
+- Prefer keyword arguments for methods with 3+ parameters
+- Document complex algorithms with inline comments
+
+### Class Organization
+```ruby
+class Example
+  # Constants first
+  CONSTANTS = 'value'
+  
+  # Class variables
+  @@class_var = nil
+  
+  # Attributes (attr_accessor, attr_reader, attr_writer)
+  attr_reader :options
+  
+  # Initialization
+  def initialize(options)
+    @options = options
+  end
+  
+  # Public methods
+  def public_method
+    # Implementation
+  end
+  
+  private
+  
+  # Private methods
+  def private_method
+    # Implementation  
+  end
+end
+```
+
+### Error Handling
+- Use specific exception classes when appropriate
+- Always handle and log database connection errors
+- Provide helpful error messages for user-facing issues
+- Use `begin/rescue/ensure` blocks judiciously
+
+## Testing Requirements
+
+### Test Coverage
+- All public methods must have tests
+- Test both success and failure scenarios
+- Mock external dependencies (database, filesystem, Redis)
+- Maintain >90% test coverage
+
+### RSpec Conventions
+```ruby
+RSpec.describe ClassName do
+  let(:options) { { option: 'value' } }
+  let(:instance) { described_class.new(options) }
+  
+  describe '#method_name' do
+    context 'when condition is met' do
+      it 'performs expected behavior' do
+        expect(instance.method_name).to eq(expected_result)
+      end
+    end
+    
+    context 'when condition fails' do
+      it 'handles error appropriately' do
+        expect { instance.method_name }.to raise_error(SpecificError)
+      end
+    end
+  end
+end
+```
+
+### Test File Organization
+- Mirror source code structure in `spec/` directory
+- Use descriptive test names that read like documentation
+- Group related tests with `context` blocks
+- Use `let` for setup, avoid instance variables in tests
+
+## Security Guidelines
+
+### Sensitive Data Handling
+- Never log database URLs or credentials
+- Use environment variables for sensitive configuration
+- Encrypt filesystem cache with AES-256-GCM
+- Hash cache keys to prevent information leakage
+
+### Input Validation
+- Validate all command-line arguments
+- Sanitize SQL file paths to prevent directory traversal
+- Validate environment names against allowed patterns
+- Escape shell command arguments appropriately
+
+## Performance Considerations
+
+### Caching Strategy
+- Cache database URLs with configurable TTL
+- Use Redis for distributed caching when available
+- Implement filesystem fallback with encryption
+- Provide cache statistics and management commands
+
+### Parallel Execution
+- Use thread pools for concurrent environment processing
+- Implement proper error isolation between threads
+- Provide progress tracking for long-running operations
+- Support both auto-detection and manual thread count
+
+### Memory Management
+- Clean up temporary files after processing
+- Use streaming for large result sets when possible
+- Implement proper resource cleanup in ensure blocks
+- Monitor memory usage in parallel operations
+
+## Development Workflow
+
+### Version Management
+- Follow semantic versioning (MAJOR.MINOR.PATCH)
+- Update CHANGELOG.md for all releases
+- Tag releases with version numbers
+- Use release branches for version preparation
+
+### Git Conventions
+- Use descriptive commit messages (50 char summary + detailed body)
+- Feature branches: `feature/description`  
+- Bugfix branches: `fix/description`
+- Release branches: `release/vX.Y.Z`
+
+### Pull Request Guidelines
+- Include comprehensive description of changes
+- Add tests for new functionality
+- Update documentation as needed
+- Ensure all CI checks pass
+
+## Code Review Checklist
+
+### Functionality
+- [ ] Does the code solve the intended problem?
+- [ ] Are edge cases handled appropriately?
+- [ ] Is error handling comprehensive?
+- [ ] Are there any obvious bugs or logic errors?
+
+### Code Quality  
+- [ ] Is the code readable and well-documented?
+- [ ] Are method and variable names descriptive?
+- [ ] Is the code DRY (Don't Repeat Yourself)?
+- [ ] Are there any code smells or anti-patterns?
+
+### Testing
+- [ ] Are there sufficient tests for the changes?
+- [ ] Do tests cover both success and failure scenarios?
+- [ ] Are mocks and stubs used appropriately?
+- [ ] Do all tests pass?
+
+### Security
+- [ ] Are there any security vulnerabilities?
+- [ ] Is sensitive data handled properly?
+- [ ] Are inputs validated and sanitized?
+- [ ] Are external commands executed safely?
+
+## Documentation Standards
+
+### Code Documentation
+- Document public APIs with clear descriptions
+- Include parameter types and return values
+- Provide usage examples for complex methods
+- Document any side effects or state changes
+
+### README Updates
+- Keep feature list current with actual functionality
+- Update installation instructions for new requirements
+- Ensure quick start examples work correctly
+- Reference comprehensive documentation in USAGE.md
+
+### Changelog Maintenance
+- Document all user-facing changes
+- Categorize changes (Added, Changed, Fixed, Removed, Security)
+- Include migration notes for breaking changes
+- Reference issue numbers when applicable
+
+## Common Patterns
+
+### Configuration Loading
+```ruby
+def self.load_config
+  config_path = config_file_path
+  return {} unless File.exist?(config_path)
+  
+  YAML.safe_load(File.read(config_path)) || {}
+rescue Psych::SyntaxError => e
+  puts "Warning: Invalid YAML in config file: #{e.message}"
+  {}
+end
+```
+
+### Error Handling with Context
+```ruby
+def execute_with_error_context(operation_name)
+  yield
+rescue StandardError => e
+  puts "Error during #{operation_name}: #{e.message}"
+  exit 1
+end
+```
+
+### Progress Tracking
+```ruby
+def with_progress_tracking(total_items, &block)
+  progress_bar = ProgressBar.new(total_items) if @options.verbose
+  
+  yield(progress_bar)
+ensure
+  progress_bar&.finish
+end
+```
+
+## Troubleshooting Common Issues
+
+### Cache Problems
+- Check encryption key format (32 characters for AES-256)
+- Verify cache directory permissions
+- Test Redis connectivity if using distributed cache
+- Clear cache if seeing stale data
+
+### Parallel Execution Issues
+- Monitor thread pool size vs available resources
+- Check for database connection limits
+- Verify SSO authentication for all threads
+- Debug individual environment failures
+
+### Output Formatting
+- Ensure column width calculations include all data
+- Test with various data sizes and types  
+- Verify format conversion works correctly
+- Check file permissions for output directories
+
+## Project-Specific Rules
+
+### Environment Handling
+- Always validate environment names before use
+- Support both single environments and groups
+- Provide clear error messages for invalid environments
+- Cache environment metadata when possible
+
+### Database Connections
+- Use read-only replicas for analytics when possible
+- Support multiple replica types (ro, secondary, tertiary, custom)
+- Implement connection retry logic with exponential backoff
+- Always clean up database connections
+
+### Configuration Management
+- Support hierarchical configuration (CLI > file > env > defaults)
+- Validate configuration on load
+- Provide clear feedback for configuration errors
+- Support both individual settings and group definitions
+
+### Output Management
+- Support multiple output formats with consistent APIs
+- Ensure proper column alignment in table format
+- Provide both aggregated and per-environment output modes
+- Support quiet mode for automation scripts
+
+## LLM Assistant Guidelines
+
+### Understanding Context
+- Always read existing code before making changes
+- Understand the full request before starting implementation
+- Consider impact on existing functionality
+- Check for similar patterns in the codebase
+
+### Making Changes
+- Follow established patterns and conventions
+- Write tests for new functionality
+- Update documentation as needed
+- Consider backward compatibility
+
+### Code Quality
+- Prioritize readability and maintainability
+- Use appropriate abstractions
+- Follow SOLID principles
+- Minimize coupling between components
+
+### Communication
+- Explain complex decisions and trade-offs
+- Provide context for architectural choices
+- Suggest improvements when appropriate
+- Ask clarifying questions when requirements are unclear
