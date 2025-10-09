@@ -83,7 +83,7 @@ RSpec.describe Lsql::SqlExecutor do
       it 'uses colored prompt format' do
         allow(sql_executor).to receive(:exec)
         allow(sql_executor).to receive(:puts)
-        expected_prompt = "\u000033[0;32mdev:%/%R%#\u000033[0m "
+        expected_prompt = '%033[0;32m% dev:%/%R%#%033[0m% '
         expect(sql_executor).to receive(:exec).with('psql', 'test-url', "--set=PROMPT1=#{expected_prompt}", "--set=PROMPT2=#{expected_prompt}")
         sql_executor.send(:run_interactive_session, 'test-url')
       end
