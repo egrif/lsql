@@ -30,10 +30,10 @@ RSpec.describe Lsql::SqlExecutor do
         let(:database_connector) { double('database_connector', mode_display: '', extract_hostname: 'test-host') }
 
         it 'creates SPACE:MODE prompt format' do
-          allow(sql_executor).to receive(:system)
+          allow(sql_executor).to receive(:exec)
           allow(sql_executor).to receive(:puts)
           expected_prompt = 'PROD:RW > production:%/%R%# '
-          expect(sql_executor).to receive(:system).with("psql \"test-url\" --set=PROMPT1=\"#{expected_prompt}\" --set=PROMPT2=\"#{expected_prompt}\"")
+          expect(sql_executor).to receive(:exec).with('psql', 'test-url', "--set=PROMPT1=#{expected_prompt}", "--set=PROMPT2=#{expected_prompt}")
           sql_executor.send(:run_interactive_session, 'test-url')
         end
       end
@@ -42,10 +42,10 @@ RSpec.describe Lsql::SqlExecutor do
         let(:database_connector) { double('database_connector', mode_display: '[RO-PRIMARY]', extract_hostname: 'test-host') }
 
         it 'creates SPACE:R1 prompt format' do
-          allow(sql_executor).to receive(:system)
+          allow(sql_executor).to receive(:exec)
           allow(sql_executor).to receive(:puts)
           expected_prompt = 'PROD:R1 > production[RO-PRIMARY]:%/%R%# '
-          expect(sql_executor).to receive(:system).with("psql \"test-url\" --set=PROMPT1=\"#{expected_prompt}\" --set=PROMPT2=\"#{expected_prompt}\"")
+          expect(sql_executor).to receive(:exec).with('psql', 'test-url', "--set=PROMPT1=#{expected_prompt}", "--set=PROMPT2=#{expected_prompt}")
           sql_executor.send(:run_interactive_session, 'test-url')
         end
       end
@@ -54,10 +54,10 @@ RSpec.describe Lsql::SqlExecutor do
         let(:database_connector) { double('database_connector', mode_display: '[RO-SECONDARY]', extract_hostname: 'test-host') }
 
         it 'creates SPACE:R2 prompt format' do
-          allow(sql_executor).to receive(:system)
+          allow(sql_executor).to receive(:exec)
           allow(sql_executor).to receive(:puts)
           expected_prompt = 'PROD:R2 > production[RO-SECONDARY]:%/%R%# '
-          expect(sql_executor).to receive(:system).with("psql \"test-url\" --set=PROMPT1=\"#{expected_prompt}\" --set=PROMPT2=\"#{expected_prompt}\"")
+          expect(sql_executor).to receive(:exec).with('psql', 'test-url', "--set=PROMPT1=#{expected_prompt}", "--set=PROMPT2=#{expected_prompt}")
           sql_executor.send(:run_interactive_session, 'test-url')
         end
       end
@@ -67,10 +67,10 @@ RSpec.describe Lsql::SqlExecutor do
         let(:database_connector) { double('database_connector', mode_display: '', extract_hostname: 'test-host') }
 
         it 'creates DEV:RW prompt format' do
-          allow(sql_executor).to receive(:system)
+          allow(sql_executor).to receive(:exec)
           allow(sql_executor).to receive(:puts)
           expected_prompt = 'DEV:RW > development:%/%R%# '
-          expect(sql_executor).to receive(:system).with("psql \"test-url\" --set=PROMPT1=\"#{expected_prompt}\" --set=PROMPT2=\"#{expected_prompt}\"")
+          expect(sql_executor).to receive(:exec).with('psql', 'test-url', "--set=PROMPT1=#{expected_prompt}", "--set=PROMPT2=#{expected_prompt}")
           sql_executor.send(:run_interactive_session, 'test-url')
         end
       end
@@ -81,10 +81,10 @@ RSpec.describe Lsql::SqlExecutor do
       let(:database_connector) { double('database_connector', mode_display: '', extract_hostname: 'test-host') }
 
       it 'uses colored prompt format' do
-        allow(sql_executor).to receive(:system)
+        allow(sql_executor).to receive(:exec)
         allow(sql_executor).to receive(:puts)
-        expected_prompt = "\u000033[0;32mdev:%/%R%#\u000033[0m "
-        expect(sql_executor).to receive(:system).with("psql \"test-url\" --set=PROMPT1=\"#{expected_prompt}\" --set=PROMPT2=\"#{expected_prompt}\"")
+        expected_prompt = '%033[0;32m% dev:%/%R%#%033[0m% '
+        expect(sql_executor).to receive(:exec).with('psql', 'test-url', "--set=PROMPT1=#{expected_prompt}", "--set=PROMPT2=#{expected_prompt}")
         sql_executor.send(:run_interactive_session, 'test-url')
       end
     end

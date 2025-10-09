@@ -310,9 +310,9 @@ RSpec.describe LSQL::ConfigManager do
     describe '.get_prompt_colors' do
       it 'returns default colors' do
         colors = described_class.get_prompt_colors
-        expect(colors['production']).to eq("\u000033[0;31m")
-        expect(colors['development']).to eq("\u000033[0;32m")
-        expect(colors['reset']).to eq("\u000033[0m")
+        expect(colors['production']).to eq('%033[0;31m% ')
+        expect(colors['development']).to eq('%033[0;32m% ')
+        expect(colors['reset']).to eq('%033[0m%')
       end
     end
 

@@ -93,7 +93,8 @@ module Lsql
       columns = all_columns.to_a
 
       # Build CSV output
-      output = "#{columns.join(',')}\n"
+      output = String.new
+      output << "#{columns.join(',')}\n"
       structured_data.each do |env, env_data|
         env_data.each do |row|
           row_values = columns.map { |col| col == 'env' ? env : (row[col] || '') }
@@ -116,7 +117,8 @@ module Lsql
       columns = all_columns.to_a
 
       # Build tab-separated output
-      output = "#{columns.join("\t")}\n"
+      output = String.new
+      output << "#{columns.join("\t")}\n"
       structured_data.each do |env, env_data|
         env_data.each do |row|
           row_values = columns.map { |col| col == 'env' ? env : (row[col] || '') }
@@ -148,7 +150,8 @@ module Lsql
       # PostgreSQL column widths are only accurate for single-environment outputs
       column_widths = calculate_column_widths(structured_data, all_columns)
 
-      output = build_header_with_columns(max_env_length, all_columns, column_widths)
+      output = String.new
+      output << build_header_with_columns(max_env_length, all_columns, column_widths)
       output << build_separator_line(max_env_length, all_columns, column_widths)
       output << build_data_rows_with_columns(structured_data, max_env_length, all_columns, column_widths)
       output

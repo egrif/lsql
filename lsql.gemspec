@@ -18,6 +18,8 @@ Gem::Specification.new do |spec|
   spec.metadata['homepage_uri'] = spec.homepage
   spec.metadata['source_code_uri'] = 'https://github.com/egrif/lsql'
   spec.metadata['changelog_uri'] = 'https://github.com/egrif/lsql/blob/main/CHANGELOG.md'
+  spec.metadata['bug_tracker_uri'] = 'https://github.com/egrif/lsql/issues'
+  spec.metadata['documentation_uri'] = 'https://github.com/egrif/lsql/blob/main/README.md'
   spec.metadata['github_repo'] = 'https://github.com/egrif/lsql'
   spec.metadata['rubygems_mfa_required'] = 'true'
 
