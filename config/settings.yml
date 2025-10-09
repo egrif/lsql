@@ -78,11 +78,11 @@ groups:
 
 # Prompt configuration for interactive sessions
 prompts:
-  # Color codes for different environment types
+  # Color codes for different environment types (psql format)
   colors:
-    production: "\033[0;31m"    # Red for production environments
-    development: "\033[0;32m"   # Green for development/staging environments
-    reset: "\033[0m"           # Reset color
+    production: "%033[0;31m% "    # Red for production environments
+    development: "%033[0;32m% "   # Green for development/staging environments
+    reset: "%033[0m%"           # Reset color
 
   # Environment patterns to determine color scheme
   # Environments matching these patterns will use production colors (red)

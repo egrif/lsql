@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2025-10-09
+
+### Fixed
+- **Interactive Session Signal Handling**: Improved signal handling for interactive psql sessions
+  - Replaced `system()` with `exec()` to properly transfer signal handling to psql process
+  - Ensures Ctrl+C, Ctrl+D, and other control characters work correctly in interactive mode
+  - Prevents Ruby from interfering with psql's native signal handling
+- **Prompt Configuration**: Enhanced psql prompt formatting
+  - Fixed psql color code format to use proper `%001` and `%002` escape sequences
+  - Improved prompt sanitization to handle null bytes safely
+  - Added debug output for prompt configuration troubleshooting
+
+### Enhanced
+- **Documentation**: Updated configuration examples with correct psql color code format
+
 ## [1.7.0] - 2025-10-08
 
 ### Added

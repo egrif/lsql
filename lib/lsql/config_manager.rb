@@ -192,8 +192,9 @@ module LSQL
         # Uncomment and customize prompt settings:
         # prompts:
         #   colors:
-        #     production: "\\033[0;31m"     # Red for production
-        #     development: "\\033[0;33m"    # Yellow for development
+        #     production: "%001%033[0;31m%002"     # Red for production (psql format)
+        #     development: "%001%033[0;32m%002"    # Green for development (psql format)
+        #     reset: "%001%033[0m%002"             # Reset color (psql format)
         #   production_patterns:
         #     - "^prod"
         #     - "^live"
