@@ -82,7 +82,7 @@ jobs:
       - name: Build gem
         run: |
           gem build lsql.gemspec
-          echo "GEM_FILE=$(ls *.gem)" >> $GITHUB_ENV
+          ls -la *.gem
 
       - name: Create Release
         id: create_release
@@ -134,19 +134,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{ env.GEM_FILE }}
+          asset_path: ./lsql-${{ needs.check-version.outputs.version }}.gem
           asset_name: lsql-${{ needs.check-version.outputs.version }}.gem
           asset_content_type: application/octet-stream
 
       - name: Publish to RubyGems (Optional)
         if: false # Set to true if you want to publish to RubyGems
-        env:
-          GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_AUTH_TOKEN }}
         run: |
-          mkdir -p ~/.gem
-          echo ":rubygems_api_key: $GEM_HOST_API_KEY" > ~/.gem/credentials
-          chmod 0600 ~/.gem/credentials
-          gem push ${{ env.GEM_FILE }}
+          echo "RubyGems publishing is disabled"
+          echo "To enable: set secrets.RUBYGEMS_AUTH_TOKEN and change 'if: false' to 'if: true'"
 
       - name: Publish to GitHub Packages
         env:
@@ -155,13 +151,13 @@ jobs:
           mkdir -p ~/.gem
           echo ":github: Bearer $GITHUB_TOKEN" > ~/.gem/credentials
           chmod 0600 ~/.gem/credentials
-          gem push --key github --host https://rubygems.pkg.github.com/${{ github.repository_owner }} ${{ env.GEM_FILE }}
+          gem push --key github --host https://rubygems.pkg.github.com/${{ github.repository_owner }} lsql-${{ needs.check-version.outputs.version }}.gem
 
       - name: Post-release summary
         run: |
           echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: v${{ needs.check-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Gem File**: ${{ env.GEM_FILE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Gem File**: lsql-${{ needs.check-version.outputs.version }}.gem" >> $GITHUB_STEP_SUMMARY
           echo "- **Release URL**: ${{ steps.create_release.outputs.html_url }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Tests**: ✅ Passed" >> $GITHUB_STEP_SUMMARY
           echo "- **GitHub Packages**: ✅ Published" >> $GITHUB_STEP_SUMMARY
