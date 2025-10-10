@@ -5,20 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.3] - 2025-10-10
+
+### Enhanced
+- **Code Quality & Architecture**: Comprehensive codebase improvements
+  - Refactored large methods in `SqlExecutor` for better maintainability
+  - Improved error handling consistency across all components
+  - Enhanced temporary file management using Ruby's `Tempfile` class
+  - Added comprehensive input validation and sanitization
+  - Improved string building efficiency for frozen string literal compatibility
+
+### Added
+- **Configuration Validation**: Added robust validation for configuration files
+  - Validates group structure and environment definitions
+  - Checks cache settings including TTL values
+  - Provides clear error messages for invalid configurations
+- **Enhanced Documentation**: Improved inline code documentation
+  - Added comprehensive method documentation with parameter types
+  - Documented all supported environment variables
+  - Enhanced error messages with contextual help
+- **Security Improvements**: Enhanced credential handling and input sanitization
+  - Sanitizes database URLs for safe logging (removes credentials)
+  - Added SQL injection protection patterns
+  - Improved command sanitization for shell execution
+
+### Performance
+- **Optimized String Operations**: Improved performance for large result sets
+  - More efficient string concatenation using mutable strings
+  - Reduced memory allocation in output aggregation
+  - Better handling of large SQL result processing
+
+### Developer Experience
+- **Better Testing Infrastructure**: Enhanced test coverage and reliability
+  - Added tests for error handling edge cases
+  - Improved mock usage for database connections
+  - Enhanced CI/CD pipeline reliability
+
 ## [1.7.2] - 2025-10-09
 
 ### Fixed
-- **Interactive Session Signal Handling**: Improved signal handling for interactive psql sessions
-  - Replaced `system()` with `exec()` to properly transfer signal handling to psql process
-  - Ensures Ctrl+C, Ctrl+D, and other control characters work correctly in interactive mode
-  - Prevents Ruby from interfering with psql's native signal handling
-- **Prompt Configuration**: Enhanced psql prompt formatting
-  - Fixed psql color code format to use proper `%001` and `%002` escape sequences
-  - Improved prompt sanitization to handle null bytes safely
-  - Added debug output for prompt configuration troubleshooting
+- **Interactive Session Output**: Removed debug output from interactive psql sessions
+  - Eliminated "DEBUG: Raw prompt", "DEBUG: Sanitized prompt", and "DEBUG: psql command" messages
+  - Interactive sessions now start cleanly without debugging noise
+  - Maintains all functionality while providing clean user experience
+- **String Mutation Error**: Fixed FrozenError in output aggregation for Ruby 2.7+
+  - Updated OutputAggregator to use String.new for mutable string building
+  - Resolves frozen_string_literal compatibility issues
+  - Ensures proper functioning across all supported Ruby versions (2.7+)
 
 ### Enhanced
-- **Documentation**: Updated configuration examples with correct psql color code format
+- **CI Compatibility**: Improved GitHub Actions workflow for multi-Ruby support
+  - Added proper Bundler version pinning for Ruby 2.7 and 3.0 compatibility
+  - Fixed workflow linting errors and environment variable handling
+  - Maintains testing across Ruby 2.7, 3.0, 3.1, 3.2, and 3.3
 
 ## [1.7.0] - 2025-10-08
 
