@@ -34,20 +34,11 @@ module Lsql
     private
 
     def run_interactive_session(database_url)
-      # Extract and print the hostname from the database URL
-      hostname = @database_connector.extract_hostname(database_url)
-      puts "Connecting to: #{hostname}"
-
       # Construct the prompt using configuration
       psql_prompt = build_prompt
 
-      # Debug: Print the prompt before using it
-      puts "DEBUG: Raw prompt: #{psql_prompt.inspect}"
-
       # Pass the custom prompt directly to psql (sanitize null bytes)
       sanitized_prompt = psql_prompt.tr("\0", '')
-      puts "DEBUG: Sanitized prompt: #{sanitized_prompt.inspect}"
-      puts "DEBUG: psql command: psql \"#{database_url}\" --set=PROMPT1=\"#{sanitized_prompt}\" --set=PROMPT2=\"#{sanitized_prompt}\""
 
       # Use exec to replace current process with psql, allowing it to handle Ctrl+C properly
       exec('psql', database_url, "--set=PROMPT1=#{sanitized_prompt}", "--set=PROMPT2=#{sanitized_prompt}")
