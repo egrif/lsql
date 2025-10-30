@@ -39,12 +39,12 @@ describe 'CommandLineParser' do
                            ])
     end
 
-    it 'extracts cluster from environment names with dashes' do
+    it 'does not extract cluster from environment names with dashes (only from value after colon)' do
       result = Lsql::CommandLineParser.parse_environments('prod-use1-0,dev-euc1-1,staging-apse2-2')
       expect(result).to eq([
-                             { env: 'prod-use1-0', space: nil, region: nil, cluster: 'prod-use1-0' },
-                             { env: 'dev-euc1-1', space: nil, region: nil, cluster: 'dev-euc1-1' },
-                             { env: 'staging-apse2-2', space: nil, region: nil, cluster: 'staging-apse2-2' }
+                             { env: 'prod-use1-0', space: nil, region: nil, cluster: nil },
+                             { env: 'dev-euc1-1', space: nil, region: nil, cluster: nil },
+                             { env: 'staging-apse2-2', space: nil, region: nil, cluster: nil }
                            ])
     end
 
@@ -56,11 +56,19 @@ describe 'CommandLineParser' do
                            ])
     end
 
-    it 'prioritizes extracted cluster over fallback cluster' do
+    it 'uses fallback cluster when environment name has dashes but no second parameter' do
       result = Lsql::CommandLineParser.parse_environments('prod-use1-0,dev02', nil, nil, 'default-cluster')
       expect(result).to eq([
-                             { env: 'prod-use1-0', space: nil, region: nil, cluster: 'prod-use1-0' },
+                             { env: 'prod-use1-0', space: nil, region: nil, cluster: 'default-cluster' },
                              { env: 'dev02', space: nil, region: nil, cluster: 'default-cluster' }
+                           ])
+    end
+
+    it 'extracts cluster from value after colon when it contains dashes' do
+      result = Lsql::CommandLineParser.parse_environments('prod:prod-use1-0,dev:dev-euc1-1')
+      expect(result).to eq([
+                             { env: 'prod', space: nil, region: nil, cluster: 'prod-use1-0' },
+                             { env: 'dev', space: nil, region: nil, cluster: 'dev-euc1-1' }
                            ])
     end
   end
@@ -162,10 +170,10 @@ describe 'EnvironmentManager' do
     context 'with cluster environment' do
       before { options.env = 'prod-use1-0' }
 
-      it 'extracts cluster from environment name' do
+      it 'does not extract cluster from environment name (only from value after colon or CLI flag)' do
         env_manager = Lsql::EnvironmentManager.new(options)
         env = env_manager.primary_environment
-        expect(env.cluster).to eq('prod-use1-0')
+        expect(env.cluster).to be_nil
       end
     end
 
@@ -182,16 +190,16 @@ describe 'EnvironmentManager' do
       end
     end
 
-    context 'with both extracted and CLI cluster' do
+    context 'with CLI cluster' do
       before do
         options.env = 'prod-use1-0'
         options.cluster = 'custom-cluster'
       end
 
-      it 'prioritizes extracted cluster over CLI cluster' do
+      it 'uses CLI cluster when provided' do
         env_manager = Lsql::EnvironmentManager.new(options)
         env = env_manager.primary_environment
-        expect(env.cluster).to eq('prod-use1-0')
+        expect(env.cluster).to eq('custom-cluster')
       end
     end
   end
