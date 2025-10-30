@@ -59,12 +59,14 @@ module Lsql
       # Create variables for substitution
       space_display = (@options.space || 'UNKNOWN').upcase
       mode_short = get_mode_short_display
+      cluster_display = @options.cluster ? ":#{@options.cluster}" : ''
 
       # Substitute variables in template
       template.gsub('{space}', space_display)
               .gsub('{mode_short}', mode_short)
               .gsub('{env}', @options.env.to_s)
               .gsub('{mode}', @database_connector.mode_display.to_s)
+              .gsub('{cluster}', cluster_display)
     end
 
     def build_colored_prompt
@@ -79,12 +81,14 @@ module Lsql
                 colors['development'] || "\033[0;32m"
               end
       reset = colors['reset'] || "\033[0m"
+      cluster_display = @options.cluster ? ":#{@options.cluster}" : ''
 
       # Substitute variables in template
       template.gsub('{color}', color)
               .gsub('{reset}', reset)
               .gsub('{env}', @options.env.to_s)
               .gsub('{mode}', @database_connector.mode_display.to_s)
+              .gsub('{cluster}', cluster_display)
     end
 
     def get_mode_short_display

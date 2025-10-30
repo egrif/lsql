@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.5] - 2025-10-30
+
+### Added
+- **Cluster Support**: Added cluster concept as replacement for SPACE and REGION
+  - Cluster auto-detection: Environment values with dashes after `:` are treated as cluster (e.g., `prod:prod-use1-0`)
+  - `--cluster` CLI flag: Explicitly specify cluster for environments that don't have it in the environment value
+  - Cluster replaces space and region in lotus commands when specified
+  - Format: `ENV:CLUSTER` where cluster contains dashes (e.g., `prod:prod-use1-0`)
+  - Backward compatible: Existing `ENV:SPACE:REGION` format still works
+  - Full integration with caching, parallel execution, and output aggregation
+
+### Fixed
+- **Database URL Validation**: Enhanced validation and auto-recovery for database URLs
+  - Validates cached URLs are proper postgres:// or postgresql:// URLs before use
+  - Automatically clears invalid cached URLs and fetches fresh ones
+  - Prevents bad URLs from being cached (e.g., lotus installation messages)
+  - Improved error messages showing exact lotus command and output for debugging
+- **Lotus Output Parsing**: Robust parsing of lotus command output
+  - Correctly extracts DATABASE_MAIN_URL even when lotus outputs installation messages
+  - Handles multiple output formats (with `=` or `:` separator)
+  - Better error handling with detailed diagnostic information
+
+### Enhanced
+- **Error Handling**: Improved error messages for database connection issues
+  - Shows exact lotus command executed
+  - Displays full stdout and stderr when URL extraction fails
+  - Validates database URLs before caching to prevent corruption
+
 ## [1.7.4] - 2025-10-10
 
 ### Fixed

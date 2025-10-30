@@ -4,7 +4,7 @@ require 'spec_helper'
 require 'lsql/sql_executor'
 
 RSpec.describe Lsql::SqlExecutor do
-  let(:options) { double('options', no_color: false, space: nil, env: 'dev') }
+  let(:options) { double('options', no_color: false, space: nil, env: 'dev', cluster: nil) }
   let(:output_manager) { double('output_manager') }
   let(:database_connector) { double('database_connector', mode_display: '', extract_hostname: 'test-host') }
   let(:sql_executor) { described_class.new(options, output_manager, database_connector) }
@@ -24,7 +24,7 @@ RSpec.describe Lsql::SqlExecutor do
 
   describe '#execute_interactive' do
     context 'with no-color option' do
-      let(:options) { double('options', no_color: true, space: 'prod', env: 'production') }
+      let(:options) { double('options', no_color: true, space: 'prod', env: 'production', cluster: nil) }
 
       context 'with read-write mode (empty mode_display)' do
         let(:database_connector) { double('database_connector', mode_display: '', extract_hostname: 'test-host') }
@@ -63,7 +63,7 @@ RSpec.describe Lsql::SqlExecutor do
       end
 
       context 'with dev space' do
-        let(:options) { double('options', no_color: true, space: 'dev', env: 'development') }
+        let(:options) { double('options', no_color: true, space: 'dev', env: 'development', cluster: nil) }
         let(:database_connector) { double('database_connector', mode_display: '', extract_hostname: 'test-host') }
 
         it 'creates DEV:RW prompt format' do
@@ -77,7 +77,7 @@ RSpec.describe Lsql::SqlExecutor do
     end
 
     context 'with color enabled (default)' do
-      let(:options) { double('options', no_color: false, space: nil, env: 'dev') }
+      let(:options) { double('options', no_color: false, space: nil, env: 'dev', cluster: nil) }
       let(:database_connector) { double('database_connector', mode_display: '', extract_hostname: 'test-host') }
 
       it 'uses colored prompt format' do

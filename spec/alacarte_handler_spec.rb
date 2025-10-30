@@ -10,33 +10,80 @@ describe 'CommandLineParser' do
     it 'parses single environment without space or region' do
       result = Lsql::CommandLineParser.parse_environments('prod01')
       expect(result).to eq([
-                             { env: 'prod01', space: nil, region: nil }
+                             { env: 'prod01', space: nil, region: nil, cluster: nil }
                            ])
     end
 
     it 'parses single environment with space and region' do
       result = Lsql::CommandLineParser.parse_environments('prod01:prod:use1')
       expect(result).to eq([
-                             { env: 'prod01', space: 'prod', region: 'use1' }
+                             { env: 'prod01', space: 'prod', region: 'use1', cluster: nil }
                            ])
     end
 
     it 'parses multiple environments with mixed specifications' do
       result = Lsql::CommandLineParser.parse_environments('prod01:prod:use1,dev02:dev:euc1,staging03')
       expect(result).to eq([
-                             { env: 'prod01', space: 'prod', region: 'use1' },
-                             { env: 'dev02', space: 'dev', region: 'euc1' },
-                             { env: 'staging03', space: nil, region: nil }
+                             { env: 'prod01', space: 'prod', region: 'use1', cluster: nil },
+                             { env: 'dev02', space: 'dev', region: 'euc1', cluster: nil },
+                             { env: 'staging03', space: nil, region: nil, cluster: nil }
                            ])
     end
 
     it 'applies fallback values when space/region are omitted' do
       result = Lsql::CommandLineParser.parse_environments('prod01:prod,dev02::euc1,staging03', 'default_space', 'default_region')
       expect(result).to eq([
-                             { env: 'prod01', space: 'prod', region: 'default_region' },
-                             { env: 'dev02', space: 'default_space', region: 'euc1' },
-                             { env: 'staging03', space: 'default_space', region: 'default_region' }
+                             { env: 'prod01', space: 'prod', region: 'default_region', cluster: nil },
+                             { env: 'dev02', space: 'default_space', region: 'euc1', cluster: nil },
+                             { env: 'staging03', space: 'default_space', region: 'default_region', cluster: nil }
                            ])
+    end
+
+    it 'does not extract cluster from environment names with dashes (only from value after colon)' do
+      result = Lsql::CommandLineParser.parse_environments('prod-use1-0,dev-euc1-1,staging-apse2-2')
+      expect(result).to eq([
+                             { env: 'prod-use1-0', space: nil, region: nil, cluster: nil },
+                             { env: 'dev-euc1-1', space: nil, region: nil, cluster: nil },
+                             { env: 'staging-apse2-2', space: nil, region: nil, cluster: nil }
+                           ])
+    end
+
+    it 'applies fallback cluster when environment has no dashes' do
+      result = Lsql::CommandLineParser.parse_environments('prod01,dev02', nil, nil, 'default-cluster')
+      expect(result).to eq([
+                             { env: 'prod01', space: nil, region: nil, cluster: 'default-cluster' },
+                             { env: 'dev02', space: nil, region: nil, cluster: 'default-cluster' }
+                           ])
+    end
+
+    it 'uses fallback cluster when environment name has dashes but no second parameter' do
+      result = Lsql::CommandLineParser.parse_environments('prod-use1-0,dev02', nil, nil, 'default-cluster')
+      expect(result).to eq([
+                             { env: 'prod-use1-0', space: nil, region: nil, cluster: 'default-cluster' },
+                             { env: 'dev02', space: nil, region: nil, cluster: 'default-cluster' }
+                           ])
+    end
+
+    it 'extracts cluster from value after colon when it contains dashes' do
+      result = Lsql::CommandLineParser.parse_environments('prod:prod-use1-0,dev:dev-euc1-1')
+      expect(result).to eq([
+                             { env: 'prod', space: nil, region: nil, cluster: 'prod-use1-0' },
+                             { env: 'dev', space: nil, region: nil, cluster: 'dev-euc1-1' }
+                           ])
+    end
+  end
+
+  describe '.extract_cluster_from_env' do
+    it 'extracts cluster from environment names with dashes' do
+      expect(Lsql::CommandLineParser.extract_cluster_from_env('prod-use1-0')).to eq('prod-use1-0')
+      expect(Lsql::CommandLineParser.extract_cluster_from_env('dev-euc1-1')).to eq('dev-euc1-1')
+      expect(Lsql::CommandLineParser.extract_cluster_from_env('staging-apse2-2')).to eq('staging-apse2-2')
+    end
+
+    it 'returns nil for environment names without dashes' do
+      expect(Lsql::CommandLineParser.extract_cluster_from_env('prod01')).to be_nil
+      expect(Lsql::CommandLineParser.extract_cluster_from_env('dev02')).to be_nil
+      expect(Lsql::CommandLineParser.extract_cluster_from_env('staging03')).to be_nil
     end
   end
 
@@ -60,8 +107,8 @@ end
 
 describe 'EnvironmentManager' do
   let(:options) do
-    Struct.new(:env, :space, :region, :sql_command, keyword_init: true)
-          .new(env: nil, space: nil, region: nil, sql_command: 'SELECT 1')
+    Struct.new(:env, :space, :region, :cluster, :sql_command, keyword_init: true)
+          .new(env: nil, space: nil, region: nil, cluster: nil, sql_command: 'SELECT 1')
   end
 
   describe 'single environment' do
@@ -117,6 +164,42 @@ describe 'EnvironmentManager' do
         env = env_manager.primary_environment
         expect(env.space).to eq('prod') # staging matches /^(prod|staging)/i
         expect(env.region).to eq('euc1') # 1XX environments
+      end
+    end
+
+    context 'with cluster environment' do
+      before { options.env = 'prod-use1-0' }
+
+      it 'does not extract cluster from environment name (only from value after colon or CLI flag)' do
+        env_manager = Lsql::EnvironmentManager.new(options)
+        env = env_manager.primary_environment
+        expect(env.cluster).to be_nil
+      end
+    end
+
+    context 'with cluster from CLI' do
+      before do
+        options.env = 'prod01'
+        options.cluster = 'custom-cluster'
+      end
+
+      it 'uses CLI cluster when environment has no dashes' do
+        env_manager = Lsql::EnvironmentManager.new(options)
+        env = env_manager.primary_environment
+        expect(env.cluster).to eq('custom-cluster')
+      end
+    end
+
+    context 'with CLI cluster' do
+      before do
+        options.env = 'prod-use1-0'
+        options.cluster = 'custom-cluster'
+      end
+
+      it 'uses CLI cluster when provided' do
+        env_manager = Lsql::EnvironmentManager.new(options)
+        env = env_manager.primary_environment
+        expect(env.cluster).to eq('custom-cluster')
       end
     end
   end

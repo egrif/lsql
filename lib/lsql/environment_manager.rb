@@ -32,7 +32,8 @@ module Lsql
         env_specs = CommandLineParser.parse_environments(
           @options.env,
           @options.space,
-          @options.region
+          @options.region,
+          @options.cluster
         )
 
         # Create environment options for each specification
@@ -51,9 +52,9 @@ module Lsql
       env_options = @options.dup
       env_options.env = env_spec[:env]
 
-      # Apply space and region with proper precedence:
+      # Apply space, region, and cluster with proper precedence:
       # 1. Per-environment specification (ENV:SPACE:REGION)
-      # 2. CLI flags (-s/-r)
+      # 2. CLI flags (-s/-r/-c)
       # 3. Environment-based defaults
       # 4. Global defaults
 
@@ -80,6 +81,13 @@ module Lsql
                              end
       end
 
+      # Handle cluster - use extracted cluster or fallback to CLI cluster
+      if env_spec[:cluster]
+        env_options.cluster = env_spec[:cluster]
+      elsif @options.cluster
+        env_options.cluster = @options.cluster
+      end
+
       env_options
     end
 
@@ -100,6 +108,8 @@ module Lsql
       end
 
       @options.region ||= 'use1' # Default region
+
+      # Do NOT extract cluster from environment name - only use cluster if explicitly set via --cluster flag
     end
   end
 end
