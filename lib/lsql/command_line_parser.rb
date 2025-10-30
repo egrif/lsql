@@ -20,6 +20,7 @@ module Lsql
         region: nil,
         application: 'greenhouse',
         space: nil,
+        cluster: nil,
         mode: 'rw',
         sql_command: nil,
         clear_cache: false,
@@ -122,6 +123,13 @@ module Lsql
           @options.space = space
         end
 
+        opts.on('-c CLUSTER', '--cluster CLUSTER', 'Cluster (optional)',
+                '  Used for environments that do not have cluster specified in ENV value',
+                '  If ENV value contains dashes (e.g., prod-use1-0), cluster is auto-detected',
+                '  Otherwise, this cluster value is used for lotus commands') do |cluster|
+          @options.cluster = cluster
+        end
+
         opts.on('-m MODE', '--mode MODE',
                 'Database connection mode (optional, default: "rw")',
                 '  rw             - Read-write access (uses primary database)',
@@ -215,7 +223,7 @@ module Lsql
       @options
     end
 
-    def self.parse_environments(env_string, fallback_space = nil, fallback_region = nil)
+    def self.parse_environments(env_string, fallback_space = nil, fallback_region = nil, fallback_cluster = nil)
       # Split by comma to get individual environment specifications
       env_specs = env_string.split(',').map(&:strip)
 
@@ -223,16 +231,46 @@ module Lsql
         parts = env_spec.split(':')
 
         env_name = parts[0]
-        # Handle empty strings as nil for fallback logic
-        space = parts[1].nil? || parts[1].empty? ? fallback_space : parts[1]
-        region = parts[2].nil? || parts[2].empty? ? fallback_region : parts[2]
+        second_part = parts[1].nil? || parts[1].empty? ? nil : parts[1]
+        third_part = parts[2].nil? || parts[2].empty? ? nil : parts[2]
+
+        # Check if the value after ":" contains dashes - if so, it's a cluster
+        # Format: prod:prod-use1-0 -> env: prod, cluster: prod-use1-0
+        # Format: prod:prod -> env: prod, space: prod (no cluster)
+        cluster = nil
+        space = nil
+        region = nil
+
+        if second_part&.include?('-')
+          # Value after ":" contains dashes, so it's a cluster
+          cluster = second_part
+          # Region might be in third part if provided
+          region = third_part || fallback_region
+          space = fallback_space
+        else
+          # Value after ":" doesn't contain dashes, so it's space (or nil)
+          space = second_part || fallback_space
+          region = third_part || fallback_region
+          cluster = fallback_cluster
+        end
+
+        # Do NOT extract cluster from env_name itself - only from the value after ":"
+        # or from the --cluster flag (fallback_cluster)
 
         {
           env: env_name,
           space: space,
-          region: region
+          region: region,
+          cluster: cluster
         }
       end
+    end
+
+    def self.extract_cluster_from_env(env_name)
+      # If environment name contains one or more dashes, assume it's the cluster
+      # e.g., "prod-use1-0" -> "prod-use1-0"
+      # e.g., "prod01" -> nil (no dashes, no cluster)
+      env_name.include?('-') ? env_name : nil
     end
 
     def self.multiple_environments?(env_string)

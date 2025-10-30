@@ -93,12 +93,12 @@ prompts:
   # Default prompt templates
   templates:
     # Colored prompt template (when --no-color is not used)
-    # Available variables: {env}, {mode}, {color}, {reset}
-    colored: "{color}{env}{mode}:%/%R%#{reset} "
+    # Available variables: {env}, {mode}, {color}, {reset}, {cluster}
+    colored: "{color}{env}{mode}{cluster}:%/%R%#{reset} "
     
     # No-color prompt template (when --no-color is used)
-    # Available variables: {env}, {mode}, {space}, {mode_short}
-    plain: "{space}:{mode_short} > {env}{mode}:%/%R%# "
+    # Available variables: {env}, {mode}, {space}, {mode_short}, {cluster}
+    plain: "{space}:{mode_short} > {env}{mode}{cluster}:%/%R%# "
 
 # Default settings for new installations
 defaults:
@@ -106,3 +106,4 @@ defaults:
   region: use1
   application: greenhouse
   mode: rw
+  cluster: null

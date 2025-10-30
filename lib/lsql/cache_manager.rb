@@ -218,25 +218,27 @@ module LSQL
     end
 
     # Convenience method that takes individual parameters
-    def cache_url_for_params(space, env, region, application, url)
-      composite_key = build_environment_key(space, env, region, application)
+    def cache_url_for_params(space, env, region, application, url, cluster = nil)
+      composite_key = build_environment_key(space, env, region, application, cluster)
       cache_url(composite_key, url)
     end
 
-    def get_cached_url_for_params(space, env, region, application)
-      composite_key = build_environment_key(space, env, region, application)
+    def get_cached_url_for_params(space, env, region, application, cluster = nil)
+      composite_key = build_environment_key(space, env, region, application, cluster)
       get_cached_url(composite_key)
     end
 
-    def url_cached_for_params?(space, env, region, application)
-      composite_key = build_environment_key(space, env, region, application)
+    def url_cached_for_params?(space, env, region, application, cluster = nil)
+      composite_key = build_environment_key(space, env, region, application, cluster)
       url_cached?(composite_key)
     end
 
     private
 
-    def build_environment_key(space, env, region, application)
-      "#{space}_#{env}_#{region}_#{application}"
+    def build_environment_key(space, env, region, application, cluster = nil)
+      key_parts = [space, env, region, application]
+      key_parts << cluster if cluster
+      key_parts.join('_')
     end
 
     public

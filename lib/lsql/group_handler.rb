@@ -366,7 +366,7 @@ module Lsql
         temp_connector = DatabaseConnector.new(env_options)
         cache = temp_connector.instance_variable_get(:@cache)
 
-        if cache.url_cached_for_params?(env_options.space, env_options.env, env_options.region, env_options.application)
+        if cache.url_cached_for_params?(env_options.space, env_options.env, env_options.region, env_options.application, env_options.cluster)
           puts "Environment #{env} cached - no lotus ping needed for #{env_options.space}/#{env_options.region}" if @options.verbose
         else
           # URL not cached - we'll need to call lotus, so ping is required
