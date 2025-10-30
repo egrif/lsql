@@ -218,17 +218,17 @@ module LSQL
     end
 
     # Convenience method that takes individual parameters
-    def cache_url_for_params(space, env, region, application, url, cluster = nil)
+    def cache_url_for_params(space:, env:, region:, application:, url:, cluster: nil) # rubocop:disable Metrics/ParameterLists
       composite_key = build_environment_key(space, env, region, application, cluster)
       cache_url(composite_key, url)
     end
 
-    def get_cached_url_for_params(space, env, region, application, cluster = nil)
+    def get_cached_url_for_params(space:, env:, region:, application:, cluster: nil)
       composite_key = build_environment_key(space, env, region, application, cluster)
       get_cached_url(composite_key)
     end
 
-    def url_cached_for_params?(space, env, region, application, cluster = nil)
+    def url_cached_for_params?(space:, env:, region:, application:, cluster: nil)
       composite_key = build_environment_key(space, env, region, application, cluster)
       url_cached?(composite_key)
     end

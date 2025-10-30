@@ -38,7 +38,80 @@ module Lsql
       @options.sql_command = args.shift if args.first && !args.first.start_with?('-')
 
       # Parse options
-      option_parser = OptionParser.new do |opts|
+      option_parser = build_option_parser
+
+      begin
+        option_parser.parse!(args)
+      rescue OptionParser::InvalidOption, OptionParser::MissingArgument => e
+        puts "Error: #{e.message}"
+        puts option_parser
+        exit 1
+      end
+
+      # Check required parameters (skip when clearing cache, showing stats, config operations)
+      validate_required_params(option_parser)
+
+      @options
+    end
+
+    def self.parse_environments(env_string, fallback_space = nil, fallback_region = nil, fallback_cluster = nil)
+      # Split by comma to get individual environment specifications
+      env_specs = env_string.split(',').map(&:strip)
+
+      env_specs.map do |env_spec|
+        parts = env_spec.split(':')
+
+        env_name = parts[0]
+        second_part = parts[1].nil? || parts[1].empty? ? nil : parts[1]
+        third_part = parts[2].nil? || parts[2].empty? ? nil : parts[2]
+
+        # Check if the value after ":" contains dashes - if so, it's a cluster
+        # Format: prod:prod-use1-0 -> env: prod, cluster: prod-use1-0
+        # Format: prod:prod -> env: prod, space: prod (no cluster)
+        cluster = nil
+        space = nil
+        region = nil
+
+        if second_part&.include?('-')
+          # Value after ":" contains dashes, so it's a cluster
+          cluster = second_part
+          # Region might be in third part if provided
+          region = third_part || fallback_region
+          space = fallback_space
+        else
+          # Value after ":" doesn't contain dashes, so it's space (or nil)
+          space = second_part || fallback_space
+          region = third_part || fallback_region
+          cluster = fallback_cluster
+        end
+
+        # Do NOT extract cluster from env_name itself - only from the value after ":"
+        # or from the --cluster flag (fallback_cluster)
+
+        {
+          env: env_name,
+          space: space,
+          region: region,
+          cluster: cluster
+        }
+      end
+    end
+
+    def self.extract_cluster_from_env(env_name)
+      # If environment name contains one or more dashes, assume it's the cluster
+      # e.g., "prod-use1-0" -> "prod-use1-0"
+      # e.g., "prod01" -> nil (no dashes, no cluster)
+      env_name.include?('-') ? env_name : nil
+    end
+
+    def self.multiple_environments?(env_string)
+      !env_string.nil? && env_string.include?(',')
+    end
+
+    private
+
+    def build_option_parser
+      OptionParser.new do |opts|
         opts.banner = "lsql v#{Lsql::VERSION}\nUsage: #{File.basename($PROGRAM_NAME)} [<SQL_COMMAND>] [options]"
 
         opts.separator ''
@@ -196,85 +269,22 @@ module Lsql
         opts.separator '  Priority: CLI args > user settings > defaults > env vars'
         opts.separator '  Environment variables: LSQL_CACHE_PREFIX, LSQL_CACHE_TTL, LSQL_CACHE_DIR, LSQL_CACHE_KEY'
       end
+    end
 
-      begin
-        option_parser.parse!(args)
-      rescue OptionParser::InvalidOption, OptionParser::MissingArgument => e
-        puts "Error: #{e.message}"
+    def validate_required_params(option_parser)
+      return if @options.clear_cache || @options.cache_stats || @options.show_config || @options.init_config
+
+      if @options.env.nil? && @options.group.nil?
+        puts 'Error: Either Environment (-e) or Group (-g) is required.'
         puts option_parser
         exit 1
       end
 
-      # Check required parameters (skip when clearing cache, showing stats, config operations)
-      unless @options.clear_cache || @options.cache_stats || @options.show_config || @options.init_config
-        if @options.env.nil? && @options.group.nil?
-          puts 'Error: Either Environment (-e) or Group (-g) is required.'
-          puts option_parser
-          exit 1
-        end
+      return unless @options.env && @options.group
 
-        if @options.env && @options.group
-          puts 'Error: Cannot specify both Environment (-e) and Group (-g) options.'
-          puts option_parser
-          exit 1
-        end
-      end
-
-      @options
-    end
-
-    def self.parse_environments(env_string, fallback_space = nil, fallback_region = nil, fallback_cluster = nil)
-      # Split by comma to get individual environment specifications
-      env_specs = env_string.split(',').map(&:strip)
-
-      env_specs.map do |env_spec|
-        parts = env_spec.split(':')
-
-        env_name = parts[0]
-        second_part = parts[1].nil? || parts[1].empty? ? nil : parts[1]
-        third_part = parts[2].nil? || parts[2].empty? ? nil : parts[2]
-
-        # Check if the value after ":" contains dashes - if so, it's a cluster
-        # Format: prod:prod-use1-0 -> env: prod, cluster: prod-use1-0
-        # Format: prod:prod -> env: prod, space: prod (no cluster)
-        cluster = nil
-        space = nil
-        region = nil
-
-        if second_part&.include?('-')
-          # Value after ":" contains dashes, so it's a cluster
-          cluster = second_part
-          # Region might be in third part if provided
-          region = third_part || fallback_region
-          space = fallback_space
-        else
-          # Value after ":" doesn't contain dashes, so it's space (or nil)
-          space = second_part || fallback_space
-          region = third_part || fallback_region
-          cluster = fallback_cluster
-        end
-
-        # Do NOT extract cluster from env_name itself - only from the value after ":"
-        # or from the --cluster flag (fallback_cluster)
-
-        {
-          env: env_name,
-          space: space,
-          region: region,
-          cluster: cluster
-        }
-      end
-    end
-
-    def self.extract_cluster_from_env(env_name)
-      # If environment name contains one or more dashes, assume it's the cluster
-      # e.g., "prod-use1-0" -> "prod-use1-0"
-      # e.g., "prod01" -> nil (no dashes, no cluster)
-      env_name.include?('-') ? env_name : nil
-    end
-
-    def self.multiple_environments?(env_string)
-      !env_string.nil? && env_string.include?(',')
+      puts 'Error: Cannot specify both Environment (-e) and Group (-g) options.'
+      puts option_parser
+      exit 1
     end
   end
 end

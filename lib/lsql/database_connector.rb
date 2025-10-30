@@ -66,82 +66,8 @@ module Lsql
     end
 
     def get_database_url
-      # Check if URL is cached using all lotus parameters for uniqueness
-      cached_url = nil
-      if @cache.url_cached_for_params?(@options.space, @options.env, @options.region, @options.application, @options.cluster)
-        puts "Using cached database URL for #{@options.env} (space: #{@options.space}, region: #{@options.region}, app: #{@options.application}, cluster: #{@options.cluster})" if @options.verbose
-        cached_url = @cache.get_cached_url_for_params(@options.space, @options.env, @options.region,
-                                                      @options.application, @options.cluster)
-
-        # Validate cached URL - if it's invalid, clear it and fetch fresh
-        unless cached_url && (cached_url.start_with?('postgres://') || cached_url.start_with?('postgresql://'))
-          puts 'Warning: Invalid cached database URL detected. Clearing cache and fetching fresh URL.'
-          @cache.clear_cache
-          cached_url = nil
-        end
-      end
-
-      if cached_url.nil?
-        # Always get the main database URL - never use any other secret name
-        cmd = build_lotus_command
-        stdout, stderr, status = Open3.capture3(cmd)
-
-        if status.success?
-          # Extract the URL from stdout - look for the line starting with DATABASE_MAIN_URL=
-          # Lotus may output installation messages, so we need to find the actual URL line
-          # Try multiple possible formats
-          url_line = stdout.lines.find { |line| line.strip.match?(/^DATABASE_MAIN_URL\s*[:=]/i) } ||
-                     stdout.lines.find { |line| line.strip.start_with?('DATABASE_MAIN_URL=') }
-
-          if url_line.nil?
-            puts "Failed to retrieve DATABASE_MAIN_URL for environment: #{@options.env}"
-            puts "Command executed: #{cmd}"
-            puts 'Lotus stdout:'
-            puts stdout
-            puts 'Lotus stderr:' unless stderr.empty?
-            puts stderr unless stderr.empty?
-            exit 1
-          end
-
-          # Extract URL value, handling both = and : as separators
-          cached_url = url_line.strip.sub(/^DATABASE_MAIN_URL\s*[:=]\s*/i, '').strip
-
-          if cached_url.empty?
-            puts "Failed to retrieve DATABASE_MAIN_URL for environment: #{@options.env}"
-            puts "Command executed: #{cmd}"
-            puts "Found URL line but it's empty: #{url_line.inspect}"
-            puts 'Lotus stdout:'
-            puts stdout
-            exit 1
-          end
-
-          # Validate that we got a proper database URL (should start with postgres://)
-          unless cached_url.start_with?('postgres://') || cached_url.start_with?('postgresql://')
-            puts "Invalid database URL retrieved for environment: #{@options.env}"
-            puts "Command executed: #{cmd}"
-            puts "Extracted URL value: #{cached_url.inspect}"
-            puts "URL line found: #{url_line.inspect}"
-            puts 'Lotus stdout:'
-            puts stdout
-            puts 'Lotus stderr:' unless stderr.empty?
-            puts stderr unless stderr.empty?
-            exit 1
-          end
-
-          # Cache the original URL with all parameters for uniqueness
-          @cache.cache_url_for_params(@options.space, @options.env, @options.region, @options.application, cached_url, @options.cluster)
-          if @options.verbose
-            puts "Cached database URL for #{@options.env} (space: #{@options.space}, region: #{@options.region}, app: #{@options.application}, cluster: #{@options.cluster}) - TTL: #{@cache.cache_stats[:ttl_seconds] / 60} minutes"
-          end
-        else
-          puts 'Failed to retrieve DATABASE_MAIN_URL'
-          puts "Command: #{cmd}"
-          puts "Error: #{stderr}" unless stderr.empty?
-          puts "Output: #{stdout}" unless stdout.empty?
-          puts 'No error output from lotus command. Please check your lotus configuration.' if stderr.empty? && stdout.empty?
-          exit 1
-        end
-      end
+      cached_url = get_cached_url
+      cached_url ||= fetch_url_from_lotus
 
       # Store the original URL for safety check
       original_url = cached_url
@@ -192,6 +118,104 @@ module Lsql
     end
 
     private
+
+    def get_cached_url
+      return nil unless @cache.url_cached_for_params?(space: @options.space, env: @options.env, region: @options.region,
+                                                      application: @options.application, cluster: @options.cluster)
+
+      puts "Using cached database URL for #{@options.env} (space: #{@options.space}, region: #{@options.region}, app: #{@options.application}, cluster: #{@options.cluster})" if @options.verbose
+      cached_url = @cache.get_cached_url_for_params(space: @options.space, env: @options.env,
+                                                    region: @options.region, application: @options.application,
+                                                    cluster: @options.cluster)
+
+      # Validate cached URL - if it's invalid, clear it and fetch fresh
+      unless cached_url && (cached_url.start_with?('postgres://') || cached_url.start_with?('postgresql://'))
+        puts 'Warning: Invalid cached database URL detected. Clearing cache and fetching fresh URL.'
+        @cache.clear_cache
+        return nil
+      end
+
+      cached_url
+    end
+
+    def fetch_url_from_lotus
+      cmd = build_lotus_command
+      stdout, stderr, status = Open3.capture3(cmd)
+
+      unless status.success?
+        handle_lotus_error(cmd, stdout, stderr)
+        return
+      end
+
+      cached_url = extract_url_from_lotus_output(stdout, stderr, cmd)
+      return unless cached_url
+
+      validate_and_cache_url(cached_url, cmd, stdout, stderr)
+      cached_url
+    end
+
+    def extract_url_from_lotus_output(stdout, stderr, cmd)
+      # Extract the URL from stdout - look for the line starting with DATABASE_MAIN_URL=
+      # Lotus may output installation messages, so we need to find the actual URL line
+      url_line = stdout.lines.find { |line| line.strip.match?(/^DATABASE_MAIN_URL\s*[:=]/i) } ||
+                 stdout.lines.find { |line| line.strip.start_with?('DATABASE_MAIN_URL=') }
+
+      unless url_line
+        puts "Failed to retrieve DATABASE_MAIN_URL for environment: #{@options.env}"
+        puts "Command executed: #{cmd}"
+        puts 'Lotus stdout:'
+        puts stdout
+        puts 'Lotus stderr:' unless stderr.empty?
+        puts stderr unless stderr.empty?
+        exit 1
+      end
+
+      # Extract URL value, handling both = and : as separators
+      cached_url = url_line.strip.sub(/^DATABASE_MAIN_URL\s*[:=]\s*/i, '').strip
+
+      return cached_url unless cached_url.empty?
+
+      puts "Failed to retrieve DATABASE_MAIN_URL for environment: #{@options.env}"
+      puts "Command executed: #{cmd}"
+      puts "Found URL line but it's empty: #{url_line.inspect}"
+      puts 'Lotus stdout:'
+      puts stdout
+      exit 1
+    end
+
+    def validate_and_cache_url(cached_url, cmd, stdout, stderr)
+      # Validate that we got a proper database URL (should start with postgres://)
+      unless cached_url.start_with?('postgres://') || cached_url.start_with?('postgresql://')
+        puts "Invalid database URL retrieved for environment: #{@options.env}"
+        puts "Command executed: #{cmd}"
+        puts "Extracted URL value: #{cached_url.inspect}"
+        puts 'Lotus stdout:'
+        puts stdout
+        puts 'Lotus stderr:' unless stderr.empty?
+        puts stderr unless stderr.empty?
+        exit 1
+      end
+
+      # Cache the original URL with all parameters for uniqueness
+      @cache.cache_url_for_params(space: @options.space, env: @options.env, region: @options.region,
+                                  application: @options.application, url: cached_url, cluster: @options.cluster)
+      return unless @options.verbose
+
+      ttl_minutes = @cache.cache_stats[:ttl_seconds] / 60
+      puts "Cached database URL for #{@options.env} " \
+           "(space: #{@options.space}, region: #{@options.region}, " \
+           "app: #{@options.application}, cluster: #{@options.cluster}) - " \
+           "TTL: #{ttl_minutes} minutes"
+    end
+
+    def handle_lotus_error(cmd, stdout, stderr)
+      puts 'Failed to retrieve DATABASE_MAIN_URL'
+      puts "Command: #{cmd}"
+      puts "Error: #{stderr}" unless stderr.empty?
+      puts "Output: #{stdout}" unless stdout.empty?
+      puts 'No error output from lotus command. Please check your lotus configuration.' if stderr.empty? && stdout.empty?
+      exit 1
+    end
 
     # Check if lotus is available for this space/region combination
     # This should be called after pre-pinging has been done
