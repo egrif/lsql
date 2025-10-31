@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.6] - 2025-10-30
+
+### Fixed
+- **Group Handler Execution**: Fixed group operations failing with undefined method 'env' error
+  - Convert environment strings to options objects before execution
+  - Properly handle cluster detection for group environments (e.g., prod-s2, prod-s9)
+  - Fixed parallel execution to work correctly with group environments containing dashes
+  - All group execution methods now receive properly configured options objects
+
 ## [1.7.5] - 2025-10-30
 
 ### Added
