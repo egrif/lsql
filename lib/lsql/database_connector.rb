@@ -69,6 +69,13 @@ module Lsql
       cached_url = get_cached_url
       cached_url ||= fetch_url_from_lotus
 
+      # Safety check: ensure we have a valid URL
+      unless cached_url && (cached_url.start_with?('postgres://') || cached_url.start_with?('postgresql://'))
+        puts "Error: Failed to retrieve valid database URL for environment: #{@options.env}"
+        puts "This should not happen. Please check your lotus configuration and try again."
+        exit 1
+      end
+
       # Store the original URL for safety check
       original_url = cached_url
 
