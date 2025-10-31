@@ -6,6 +6,7 @@ require 'concurrent-ruby'
 require 'open3'
 require 'set'
 require_relative 'config_manager'
+require_relative 'environment_manager'
 
 module Lsql
   # Handles group-based operations across multiple environments
@@ -55,16 +56,19 @@ module Lsql
       aggregator = @options.no_agg ? nil : OutputAggregator.new(@options)
       original_output_file = @options.output_file
 
+      # Convert environment strings to options objects
+      env_options_array = convert_environments_to_options(environments)
+
       # Pre-ping lotus for all unique space/region combinations before execution
-      pre_ping_lotus_combinations(environments)
+      pre_ping_lotus_combinations(env_options_array)
 
       # Execute environments (parallel by default, sequential if --no-parallel specified)
       results = if @options.parallel == false
-                  execute_environments_sequential(environments, aggregator)
+                  execute_environments_sequential(env_options_array, aggregator)
                 else
                   # Pre-authenticate with Lotus SSO before parallel execution to avoid multiple SSO prompts
-                  pre_authenticate_lotus_sso(environments.first) if environments.any?
-                  execute_environments_parallel(environments, aggregator)
+                  pre_authenticate_lotus_sso(env_options_array.first) if env_options_array.any?
+                  execute_environments_parallel(env_options_array, aggregator)
                 end
 
       # If using aggregation, handle output appropriately
@@ -266,10 +270,10 @@ module Lsql
 
     private
 
-    def pre_authenticate_lotus_sso(first_env)
+    def pre_authenticate_lotus_sso(first_env_options)
       # Make a simple lotus ping to establish SSO session before parallel execution
       # This prevents multiple SSO authentication prompts when running in parallel
-      return unless first_env
+      return unless first_env_options
 
       puts 'Establishing SSO session...' if @options.verbose
 
@@ -350,30 +354,39 @@ module Lsql
 
     # Pre-ping lotus only for space/region combinations where we need to call lotus
     # (i.e., where database URLs are not cached)
+    def convert_environments_to_options(environments)
+      # Convert environment strings to options objects
+      environments.map do |env_string|
+        env_options = @options.dup
+        env_options.env = env_string
+
+        # Initialize environment manager to determine space, region, and cluster
+        EnvironmentManager.new(env_options)
+
+        env_options
+      end
+    end
+
     def pre_ping_lotus_combinations(environments)
       # Check each environment to see if it needs a lotus call
       combinations_needing_ping = Set.new
 
-      environments.each do |env|
-        # Create temporary options to determine space and region for each environment
-        env_options = @options.dup
-        env_options.env = env
-
-        # Initialize environment manager to determine space and region
-        EnvironmentManager.new(env_options)
+      environments.each do |env_options|
+        # env_options is already a full options object with environment-specific settings
 
         # Check if database URL is already cached for this environment
         temp_connector = DatabaseConnector.new(env_options)
         cache = temp_connector.instance_variable_get(:@cache)
 
+        env_name = env_options.env
         if cache.url_cached_for_params?(space: env_options.space, env: env_options.env,
                                         region: env_options.region, application: env_options.application,
                                         cluster: env_options.cluster)
-          puts "Environment #{env} cached - no lotus ping needed for #{env_options.space}/#{env_options.region}" if @options.verbose
+          puts "Environment #{env_name} cached - no lotus ping needed for #{env_options.space}/#{env_options.region}" if @options.verbose
         else
           # URL not cached - we'll need to call lotus, so ping is required
           combinations_needing_ping.add([env_options.space, env_options.region])
-          puts "Environment #{env} not cached - will need lotus ping for #{env_options.space}/#{env_options.region}" if @options.verbose
+          puts "Environment #{env_name} not cached - will need lotus ping for #{env_options.space}/#{env_options.region}" if @options.verbose
         end
       end
 
