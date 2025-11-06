@@ -32,7 +32,7 @@ module Lsql
 
       # Apply format conversion if specified, otherwise use default tabular format
       output = if @options.respond_to?(:format) && @options.format
-                 convert_to_format(structured_data)
+                 convert_to_format(structured_data, data_extractor)
                else
                  format_output(structured_data, data_extractor)
                end
@@ -41,7 +41,7 @@ module Lsql
       cleanup_temp_files
     end
 
-    def convert_to_format(structured_data)
+    def convert_to_format(structured_data, data_extractor = nil)
       # Convert structured data to the requested format
       case @options.format
       when 'json'
@@ -49,12 +49,12 @@ module Lsql
       when 'yaml'
         convert_to_yaml(structured_data)
       when 'csv'
-        convert_to_csv(structured_data)
+        convert_to_csv(structured_data, data_extractor)
       when 'txt'
-        convert_to_txt(structured_data)
+        convert_to_txt(structured_data, data_extractor)
       else
         # Fallback to default tabular format
-        format_output(structured_data)
+        format_output(structured_data, data_extractor)
       end
     end
 
@@ -82,14 +82,23 @@ module Lsql
       env_grouped_data.to_yaml
     end
 
-    def convert_to_csv(structured_data)
+    def convert_to_csv(structured_data, data_extractor = nil)
       return '' if structured_data.empty?
 
-      # Get all unique columns
+      # Get all unique columns from rows and from environments with no rows
       all_columns = Set.new(['env'])
       structured_data.each_value do |env_data|
         env_data.each { |row| all_columns.merge(row.keys) }
       end
+
+      # Also include columns from environments with no rows
+      if data_extractor
+        structured_data.each_key do |env|
+          env_columns = data_extractor.get_columns_for_env(env)
+          all_columns.merge(env_columns) if env_columns && !env_columns.empty?
+        end
+      end
+
       columns = all_columns.to_a
 
       # Build CSV output
@@ -105,15 +114,24 @@ module Lsql
       output
     end
 
-    def convert_to_txt(structured_data)
+    def convert_to_txt(structured_data, data_extractor = nil)
       # For TXT format, use tab-separated values
       return '' if structured_data.empty?
 
-      # Get all unique columns
+      # Get all unique columns from rows and from environments with no rows
       all_columns = Set.new(['env'])
       structured_data.each_value do |env_data|
         env_data.each { |row| all_columns.merge(row.keys) }
       end
+
+      # Also include columns from environments with no rows
+      if data_extractor
+        structured_data.each_key do |env|
+          env_columns = data_extractor.get_columns_for_env(env)
+          all_columns.merge(env_columns) if env_columns && !env_columns.empty?
+        end
+      end
+
       columns = all_columns.to_a
 
       # Build tab-separated output
@@ -140,11 +158,11 @@ module Lsql
     private
 
     # Format structured data into readable text output
-    def format_output(structured_data, _data_extractor = nil)
+    def format_output(structured_data, data_extractor = nil)
       return '' if structured_data.empty?
 
       max_env_length = calculate_max_env_length(structured_data.keys)
-      all_columns = extract_all_columns(structured_data)
+      all_columns = extract_all_columns(structured_data, data_extractor)
 
       # Always calculate column widths from aggregated data to ensure proper alignment
       # PostgreSQL column widths are only accurate for single-environment outputs
@@ -163,13 +181,22 @@ module Lsql
     end
 
     # Extract all unique column names from all environments
-    def extract_all_columns(structured_data)
+    def extract_all_columns(structured_data, data_extractor = nil)
       columns = Set.new
       structured_data.each_value do |env_data|
         env_data.each do |row|
           columns.merge(row.keys)
         end
       end
+
+      # Also include columns from environments with no rows
+      if data_extractor
+        structured_data.each_key do |env|
+          env_columns = data_extractor.get_columns_for_env(env)
+          columns.merge(env_columns) if env_columns && !env_columns.empty?
+        end
+      end
+
       columns.to_a
     end
 

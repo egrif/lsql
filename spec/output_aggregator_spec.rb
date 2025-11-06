@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'stringio'
 require 'lsql/output_aggregator'
 
 RSpec.describe Lsql::OutputAggregator do
@@ -33,5 +34,48 @@ RSpec.describe Lsql::OutputAggregator do
     expect(content).to include('1')
     expect(content).to include('foo')
     File.delete(output_file)
+  end
+
+  it 'extracts columns from environments with no rows (SELECT * scenario)' do
+    # Simulate scenario where most environments have no rows but one has data
+    # This tests the fix for SELECT * queries where columns need to be extracted from headers
+    env1 = 'prod-s2'
+    env2 = 'prod-s3'
+    env3 = 'prod-s9'
+
+    # Environment with no rows - still has header and separator
+    no_rows_output = "oid | extname | extowner | extnamespace | extrelocatable | extversion | extconfig | extcondition\n" \
+                     "----+---------+----------+--------------+----------------+------------+-----------+--------------\n" \
+                     "(0 rows)\n"
+
+    # Environment with one row
+    one_row_output = "oid | extname | extowner | extnamespace | extrelocatable | extversion | extconfig | extcondition\n" \
+                     "----+---------+----------+--------------+----------------+------------+-----------+--------------\n " \
+                     "123 | pg_repack | 10 | 2200 | t | 1.4.8 | |\n" \
+                     "(1 row)\n"
+
+    path1 = aggregator.create_temp_file(env1)
+    path2 = aggregator.create_temp_file(env2)
+    path3 = aggregator.create_temp_file(env3)
+
+    File.write(path1, no_rows_output)
+    File.write(path2, no_rows_output)
+    File.write(path3, one_row_output)
+
+    output = StringIO.new
+    original_stdout = $stdout
+    $stdout = output
+    aggregator.aggregate_output(nil)
+    $stdout = original_stdout
+    output_string = output.string
+
+    # Verify columns are extracted from environments with no rows
+    expect(output_string).to include('extname')
+    expect(output_string).to include('extversion')
+    expect(output_string).to include('extowner')
+    # Verify data row from environment with data is included
+    expect(output_string).to include('prod-s9')
+    expect(output_string).to include('pg_repack')
+    expect(output_string).to include('1.4.8')
   end
 end
