@@ -8,6 +8,7 @@ module Lsql
     def initialize
       @data = {}
       @column_widths = {}
+      @columns_by_env = {} # Store columns for each environment even when no rows
     end
 
     # Extract data from temp files and return structured JSON
@@ -22,11 +23,17 @@ module Lsql
         lines = File.readlines(temp_file.path)
         next if lines.empty?
 
-        env_data = parse_postgresql_output(lines)
+        env_data, columns = parse_postgresql_output(lines)
         @data[env] = env_data
+        @columns_by_env[env] = columns if columns && !columns.empty?
       end
 
       @data
+    end
+
+    # Get columns for an environment (even if no rows)
+    def get_columns_for_env(env)
+      @columns_by_env[env] || []
     end
 
     # Get extracted column width information
@@ -45,28 +52,30 @@ module Lsql
     private
 
     # Parse PostgreSQL table output format
+    # Returns [data_rows, columns] so columns are preserved even when no rows
     def parse_postgresql_output(lines)
-      return [] if lines.empty?
+      return [[], []] if lines.empty?
 
       # Find header line (first non-empty line)
       header_line = lines.find { |line| !line.strip.empty? }
-      return [] unless header_line
+      return [[], []] unless header_line
 
       header_index = lines.index(header_line)
 
       # Extract column names from header
       columns = extract_columns_from_header(header_line)
-      return [] if columns.empty?
+      return [[], []] if columns.empty?
 
       # Find separator line (should be after header)
       separator_index = find_separator_line(lines, header_index)
-      return [] unless separator_index
+      return [[], columns] unless separator_index
 
       # Extract column widths from separator line
       extract_column_widths_from_separator(lines[separator_index], columns)
 
       # Extract data rows (after separator, before footer)
-      extract_data_rows(lines, separator_index, columns)
+      data_rows = extract_data_rows(lines, separator_index, columns)
+      [data_rows, columns]
     end
 
     # Extract column names from header line
@@ -108,7 +117,8 @@ module Lsql
         break if line.empty? || line.match?(/^\(\d+\s+rows?\)$/) || line.match?(/^Time:/)
 
         # Parse data row
-        values = line.split('|').map(&:strip)
+        # Use -1 limit to include trailing empty strings (for NULL/empty columns)
+        values = line.split('|', -1).map(&:strip)
         next if values.length != columns.length
 
         # Create hash object with column names as keys
