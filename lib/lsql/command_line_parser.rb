@@ -22,6 +22,7 @@ module Lsql
         space: nil,
         cluster: nil,
         mode: 'rw',
+        database: nil,
         sql_command: nil,
         clear_cache: false,
         cache_prefix: nil,
@@ -211,6 +212,13 @@ module Lsql
                 '  r3/tertiary    - Read-only access using tertiary replica',
                 '  <custom>       - Uses custom replica name') do |mode|
           @options.mode = mode
+        end
+
+        opts.on('-d DATABASE', '--database DATABASE',
+                'Database name to connect to (optional)',
+                '  Overrides the database name in the URL from lotus',
+                '  Example: -d analytics_db') do |database|
+          @options.database = database
         end
 
         opts.on('--clear-cache', 'Clear the persistent database URL cache',
