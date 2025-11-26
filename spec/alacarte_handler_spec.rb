@@ -107,8 +107,8 @@ end
 
 describe 'EnvironmentManager' do
   let(:options) do
-    Struct.new(:env, :space, :region, :cluster, :sql_command, keyword_init: true)
-          .new(env: nil, space: nil, region: nil, cluster: nil, sql_command: 'SELECT 1')
+    Struct.new(:env, :space, :region, :cluster, :database, :sql_command, keyword_init: true)
+          .new(env: nil, space: nil, region: nil, cluster: nil, database: nil, sql_command: 'SELECT 1')
   end
 
   describe 'single environment' do

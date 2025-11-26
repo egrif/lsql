@@ -13,7 +13,8 @@ RSpec.describe Lsql::DatabaseConnector do
       application: 'myapp',
       verbose: false,
       cache_ttl: 10,
-      cache_prefix: 'test'
+      cache_prefix: 'test',
+      database: nil
     )
   end
 
@@ -112,6 +113,57 @@ RSpec.describe Lsql::DatabaseConnector do
 
       # Verify cache is cleared
       expect(connector.send(:ensure_lotus_available)).to be false
+    end
+  end
+
+  describe '#override_database_name' do
+    it 'returns original URL when database_name is nil' do
+      url = 'postgres://user:pass@host:5432/original_db'
+      result = connector.override_database_name(url, nil)
+      expect(result).to eq(url)
+    end
+
+    it 'returns original URL when database_name is empty' do
+      url = 'postgres://user:pass@host:5432/original_db'
+      result = connector.override_database_name(url, '')
+      expect(result).to eq(url)
+    end
+
+    it 'overrides database name in postgres:// URL' do
+      url = 'postgres://user:pass@host:5432/original_db'
+      result = connector.override_database_name(url, 'new_db')
+      expect(result).to eq('postgres://user:pass@host:5432/new_db')
+    end
+
+    it 'overrides database name in postgresql:// URL' do
+      url = 'postgresql://user:pass@host:5432/original_db'
+      result = connector.override_database_name(url, 'new_db')
+      expect(result).to eq('postgresql://user:pass@host:5432/new_db')
+    end
+
+    it 'preserves query parameters when overriding database name' do
+      url = 'postgres://user:pass@host:5432/original_db?sslmode=require&connect_timeout=10'
+      result = connector.override_database_name(url, 'new_db')
+      expect(result).to eq('postgres://user:pass@host:5432/new_db?sslmode=require&connect_timeout=10')
+    end
+
+    it 'handles URL without database name' do
+      url = 'postgres://user:pass@host:5432'
+      result = connector.override_database_name(url, 'new_db')
+      expect(result).to eq('postgres://user:pass@host:5432/new_db')
+    end
+
+    it 'handles URL without database name but with query parameters' do
+      url = 'postgres://user:pass@host:5432?sslmode=require'
+      result = connector.override_database_name(url, 'new_db')
+      expect(result).to eq('postgres://user:pass@host:5432/new_db?sslmode=require')
+    end
+
+    it 'returns original URL for malformed URLs' do
+      url = 'not-a-valid-url'
+      expect { connector.override_database_name(url, 'new_db') }.to output(/Warning: Unable to parse database URL format/).to_stdout
+      result = connector.override_database_name(url, 'new_db')
+      expect(result).to eq(url)
     end
   end
 end

@@ -14,6 +14,9 @@ module Lsql
     end
 
     def execute(database_url)
+      # Override database name if specified
+      database_url = @database_connector.override_database_name(database_url, @options.database)
+
       # If no SQL_COMMAND is provided, open a psql console
       if @options.sql_command.nil?
         run_interactive_session(database_url)

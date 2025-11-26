@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.8] - 2025-11-26
+
+### Added
+- **Database Override**: Added `-d --database` argument to specify custom database name
+  - Override database name in URL from lotus (e.g., `-d analytics_db`)
+  - Works with all connection modes (rw, ro, r1, r2, r3, custom)
+  - Preserves query parameters when overriding database name
+  - Handles both `postgres://` and `postgresql://` URL formats
+  - Added comprehensive test coverage for database URL parsing and override functionality
+
 ## [1.7.7] - 2025-10-30
 
 ### Fixed
