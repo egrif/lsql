@@ -118,7 +118,7 @@ module Lsql
     end
 
     def override_database_name(database_url, database_name)
-      return database_url unless database_name
+      return database_url unless database_name && !database_name.empty?
 
       # Parse the PostgreSQL URL to extract components
       # Format: postgres://user:password@host:port/database?params
@@ -126,7 +126,7 @@ module Lsql
       match = database_url.match(uri_pattern)
 
       unless match
-        puts "Warning: Unable to parse database URL format. Using original URL."
+        puts 'Warning: Unable to parse database URL format. Using original URL.'
         return database_url
       end
 
