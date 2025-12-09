@@ -314,13 +314,18 @@ module Lsql
           end
         end
 
+        # Always display stderr if it contains errors, even if exit status is 0
+        # PostgreSQL may return success even with SQL errors in some cases
+        warn stderr unless stderr.empty?
+
         # If successful, write output to the specified file
         if status.success?
           File.write(output_file, stdout)
+          # Exit with error if stderr contained errors (likely SQL errors)
+          exit 1 if stderr.match?(/ERROR:|FATAL:|PANIC:/i)
         else
           # For other errors, write error output and exit
           warn stdout unless stdout.empty?
-          warn stderr unless stderr.empty?
           exit status.exitstatus
         end
       else
@@ -338,11 +343,14 @@ module Lsql
           end
         end
 
-        # For other errors, just let the command fail normally
-        unless status.success?
-          warn stderr unless stderr.empty?
-          exit status.exitstatus
-        end
+        # Always display stderr if it contains content
+        warn stderr unless stderr.empty?
+
+        # For errors, exit with the appropriate status
+        exit status.exitstatus unless status.success?
+
+        # Exit with error if stderr contained SQL errors even with success status
+        exit 1 if stderr.match?(/ERROR:|FATAL:|PANIC:/i)
 
         # Print stdout if there's any (for non-redirected commands)
         print stdout unless stdout.empty?
