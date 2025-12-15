@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.11] - 2025-12-15
+
+### Fixed
+- **JSON/YAML Format Output**: Fixed empty array output for JSON and YAML formats
+  - Changed psql options from `-t -A` to `-A -F '\t' -P footer=off` to include headers
+  - Headers are now properly included in the output for correct parsing
+  - Tab separator is explicitly set for consistent parsing
+  - Footer is suppressed to avoid parsing issues
+  - Both JSON and YAML formats now correctly display query results
+
 ## [1.7.10] - 2025-12-15
 
 ### Enhanced

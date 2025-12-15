@@ -102,4 +102,21 @@ RSpec.describe Lsql::DataExtractor do
     expect(hash_output['test']).to be_an(Array)
     expect(hash_output['test'][0]['id']).to eq('42')
   end
+
+  it 'extracts status messages when no tabular data is present' do
+    temp_files = []
+    temp_file = double('TempFile', closed?: false, close: nil, path: 'status.txt')
+    temp_files << { env: 'update_env', file: temp_file }
+
+    psql_output = ["UPDATE 3\n"]
+
+    allow(File).to receive(:exist?).with('status.txt').and_return(true)
+    allow(File).to receive(:size).with('status.txt').and_return(10)
+    allow(File).to receive(:readlines).with('status.txt').and_return(psql_output)
+
+    extractor.extract_from_temp_files(temp_files)
+
+    expect(extractor.status_messages['update_env']).to eq('UPDATE 3')
+    expect(extractor.to_hash['update_env']).to eq([])
+  end
 end
