@@ -169,9 +169,16 @@ module Lsql
       column_widths = calculate_column_widths(structured_data, all_columns)
 
       output = String.new
-      output << build_header_with_columns(max_env_length, all_columns, column_widths)
-      output << build_separator_line(max_env_length, all_columns, column_widths)
-      output << build_data_rows_with_columns(structured_data, max_env_length, all_columns, column_widths)
+      if all_columns.empty?
+        # No tabular data in any environment
+        output << "#{'env'.ljust([3, max_env_length].max)} | result\n"
+        output << "#{'-' * [3, max_env_length].max}-+-#{'-' * 20}\n"
+      else
+        output << build_header_with_columns(max_env_length, all_columns, column_widths)
+        output << build_separator_line(max_env_length, all_columns, column_widths)
+      end
+
+      output << build_data_rows_with_columns(structured_data, max_env_length, all_columns, column_widths, data_extractor)
       output
     end
 
@@ -231,14 +238,24 @@ module Lsql
     end
 
     # Build data rows with environment and column values
-    def build_data_rows_with_columns(structured_data, max_env_length, columns, column_widths)
+    def build_data_rows_with_columns(structured_data, max_env_length, columns, column_widths, data_extractor = nil)
       output = String.new
 
       structured_data.each do |env, env_data|
-        env_data.each do |row|
-          env_col = env.ljust([3, max_env_length].max)
-          values = columns.map { |col| (row[col] || '').ljust(column_widths[col]) }
-          output << "#{env_col} | #{values.join(' | ')}\n"
+        env_col = env.ljust([3, max_env_length].max)
+
+        if env_data.empty?
+          # Check for status message
+          status = data_extractor&.status_messages&.[](env) || '(no data returned)'
+
+          # If we have columns but this env has no data, print status in the first column
+          # or spanning across if possible. For now, just print it.
+          output << "#{env_col} | #{status}\n"
+        else
+          env_data.each do |row|
+            values = columns.map { |col| (row[col] || '').ljust(column_widths[col]) }
+            output << "#{env_col} | #{values.join(' | ')}\n"
+          end
         end
       end
 

@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.10] - 2025-12-15
+
+### Enhanced
+- **Result Display**: Improved output for queries that return no data or status messages
+  - Displays status messages (e.g., "UPDATE 3", "INSERT 0 1") instead of empty rows
+  - Shows "(no data returned)" for empty result sets that aren't status messages
+  - Correctly handles mixed output where some environments return data and others return status
+  - Improves visibility of non-SELECT query results in group operations
+
 ## [1.7.9] - 2025-12-09
 
 ### Fixed
