@@ -9,6 +9,7 @@ module Lsql
       @data = {}
       @column_widths = {}
       @columns_by_env = {} # Store columns for each environment even when no rows
+      @status_messages = {} # Store status messages for non-tabular output
     end
 
     # Extract data from temp files and return structured JSON
@@ -24,8 +25,17 @@ module Lsql
         next if lines.empty?
 
         env_data, columns = parse_postgresql_output(lines)
-        @data[env] = env_data
-        @columns_by_env[env] = columns if columns && !columns.empty?
+
+        if env_data.empty? && columns.empty?
+          # Try to extract status message if no tabular data found
+          status = extract_status_message(lines)
+          @status_messages[env] = status if status
+          # Ensure we have an entry in @data so the aggregator knows about this env
+          @data[env] = []
+        else
+          @data[env] = env_data
+          @columns_by_env[env] = columns if columns && !columns.empty?
+        end
       end
 
       @data
@@ -37,7 +47,7 @@ module Lsql
     end
 
     # Get extracted column width information
-    attr_reader :column_widths
+    attr_reader :column_widths, :status_messages
 
     # Get data as JSON string
     def to_json(*_args)
@@ -50,6 +60,21 @@ module Lsql
     end
 
     private
+
+    def extract_status_message(lines)
+      # Join lines and strip whitespace
+      content = lines.map(&:strip).reject(&:empty?).join(' ')
+      return nil if content.empty?
+
+      # Common PostgreSQL status messages
+      return content if content.match?(/^(UPDATE|INSERT|DELETE|CREATE|DROP|ALTER|SET|GRANT|REVOKE|COPY|BEGIN|COMMIT|ROLLBACK)/i)
+
+      # Handle "No relations found." or similar
+      return '(no data returned)' if content.include?('No relations found')
+
+      # Fallback: return the content itself if it's short, otherwise generic message
+      content.length < 50 ? content : '(no data returned)'
+    end
 
     # Parse PostgreSQL table output format
     # Returns [data_rows, columns] so columns are preserved even when no rows
@@ -68,7 +93,8 @@ module Lsql
 
       # Find separator line (should be after header)
       separator_index = find_separator_line(lines, header_index)
-      return [[], columns] unless separator_index
+      # If no separator line found, it's likely not a table output (e.g. status message)
+      return [[], []] unless separator_index
 
       # Extract column widths from separator line
       extract_column_widths_from_separator(lines[separator_index], columns)
