@@ -152,9 +152,9 @@ module Lsql
     def run_formatted_sql_file(database_url, options)
       if needs_format_conversion?
         # Use temporary file for format conversion
-        # For JSON/YAML conversion, we need tab-separated output
+        # For JSON/YAML conversion, we need tab-separated output with headers
         temp_file = "/tmp/lsql_temp_#{Process.pid}.txt"
-        conversion_options = '-t -A'
+        conversion_options = "-A -F '\t' -P footer=off"
         command = "psql -d \"#{database_url}\" #{conversion_options} -f \"#{@options.sql_command}\" > \"#{temp_file}\""
         execute_psql_command(command)
 
@@ -173,9 +173,9 @@ module Lsql
     def run_formatted_sql_command(database_url, options)
       if needs_format_conversion?
         # Use temporary file for format conversion
-        # For JSON/YAML conversion, we need tab-separated output
+        # For JSON/YAML conversion, we need tab-separated output with headers
         temp_file = "/tmp/lsql_temp_#{Process.pid}.txt"
-        conversion_options = '-t -A'
+        conversion_options = "-A -F '\t' -P footer=off"
         command = "psql -d \"#{database_url}\" #{conversion_options} -c \"#{@options.sql_command}\" > \"#{temp_file}\""
         execute_psql_command(command)
 
@@ -194,9 +194,9 @@ module Lsql
     def run_formatted_sql_to_stdout(database_url, options, sql_command, file:)
       if needs_format_conversion?
         # Use temporary file for format conversion, then output to stdout
-        # For JSON/YAML conversion, we need tab-separated output
+        # For JSON/YAML conversion, we need tab-separated output with headers
         temp_file = "/tmp/lsql_temp_#{Process.pid}.txt"
-        conversion_options = '-t -A'
+        conversion_options = "-A -F '\t' -P footer=off"
         command = if file
                     "psql -d \"#{database_url}\" #{conversion_options} -f \"#{sql_command}\" > \"#{temp_file}\""
                   else

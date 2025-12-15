@@ -78,4 +78,30 @@ RSpec.describe Lsql::OutputAggregator do
     expect(output_string).to include('pg_repack')
     expect(output_string).to include('1.4.8')
   end
+
+  it 'displays status messages for environments with no tabular data' do
+    env1 = 'update_env'
+    env2 = 'empty_env'
+
+    update_output = "UPDATE 3\n"
+    empty_output = "No relations found.\n"
+
+    path1 = aggregator.create_temp_file(env1)
+    path2 = aggregator.create_temp_file(env2)
+
+    File.write(path1, update_output)
+    File.write(path2, empty_output)
+
+    output = StringIO.new
+    original_stdout = $stdout
+    $stdout = output
+    aggregator.aggregate_output(nil)
+    $stdout = original_stdout
+    output_string = output.string
+
+    expect(output_string).to include('update_env')
+    expect(output_string).to include('UPDATE 3')
+    expect(output_string).to include('empty_env')
+    expect(output_string).to include('(no data returned)')
+  end
 end
